@@ -1,7 +1,52 @@
 // ==============================================================================
 // Chavali Blood Foundation (চাঁভালি রক্ত ফাউন্ডেশন)
-// Frontend Client Layer with Neon PostgreSQL Backend Integration & Offline Cache
+// Full-Stack Frontend Client with Neon PostgreSQL Cloud Database & Image Storage
 // ==============================================================================
+
+// ==================== IMAGE COMPRESSION UTILITY ====================
+/**
+ * Compresses and resizes high-res images in browser before sending to Neon DB.
+ * Guarantees images stay under 300KB so they never hit Vercel or PostgreSQL limits.
+ */
+function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) {
+            return reject(new Error('Selected file is not an image'));
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    if (width > height) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = () => reject(new Error('Failed to load image for compression'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.readAsDataURL(file);
+    });
+}
 
 // ==================== API CLIENT LAYER ====================
 const API = {
@@ -155,10 +200,6 @@ const API = {
         });
     },
 
-    async verifyAuth() {
-        return await this.request('/auth/verify');
-    },
-
     async changePassword(currentPassword, newPassword) {
         return await this.request('/auth/change-password', {
             method: 'POST',
@@ -204,10 +245,6 @@ function getDonorPhotos() {
     return JSON.parse(localStorage.getItem('chavali_donor_photos') || '[]');
 }
 
-function saveDonorPhotos(photos) {
-    localStorage.setItem('chavali_donor_photos', JSON.stringify(photos));
-}
-
 function getCertificates() {
     try {
         const data = localStorage.getItem('chavali_certificates');
@@ -221,7 +258,7 @@ function saveCertificates(certificates) {
     try {
         localStorage.setItem('chavali_certificates', JSON.stringify(certificates));
     } catch (err) {
-        console.warn('Storage full or unavailable');
+        console.warn('Local storage full');
     }
 }
 
@@ -286,7 +323,6 @@ const mainNav = document.getElementById('mainNav');
 const mobileOverlay = document.getElementById('mobileOverlay');
 const scrollTopBtn = document.getElementById('scrollTopBtn');
 
-// Change header style while scrolling
 window.addEventListener('scroll', debounce(() => {
     if (window.scrollY > 50) {
         if (header) header.classList.add('scrolled');
@@ -297,7 +333,6 @@ window.addEventListener('scroll', debounce(() => {
     }
 }, 100));
 
-// Mobile menu toggle
 if (hamburger) {
     hamburger.addEventListener('click', () => {
         hamburger.classList.toggle('active');
@@ -359,10 +394,10 @@ if (donorForm) {
             registeredAt: new Date().toISOString()
         };
 
-        // 1. Save to Neon database
-        const apiRes = await API.createDonor(donor);
+        // Save to Neon DB
+        await API.createDonor(donor);
 
-        // 2. Sync to local cache
+        // Sync local cache
         const donors = getDonors();
         donors.push(donor);
         saveDonors(donors);
@@ -372,13 +407,9 @@ if (donorForm) {
             submitBtn.textContent = originalBtnText;
         }
 
-        // Show success message
-        if (successMsg) {
-            successMsg.classList.add('show');
-        }
+        if (successMsg) successMsg.classList.add('show');
         donorForm.reset();
 
-        // Update UI
         renderDonorList();
         updateStats();
 
@@ -388,7 +419,7 @@ if (donorForm) {
     });
 }
 
-// ==================== CONTACT FORM SUBMISSION ====================
+// ==================== CONTACT FORM ====================
 const contactForm = document.getElementById('contactForm');
 if (contactForm) {
     contactForm.addEventListener('submit', async (e) => {
@@ -425,12 +456,11 @@ function getDonorProfileImage(donor) {
 async function renderDonorList(filter = 'all') {
     if (!donorGrid) return;
     
-    // Fetch live from Neon backend, fallback to local cache
     let donors = getDonors();
     const res = await API.getDonors(filter);
     if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
         donors = res.data;
-        saveDonors(donors); // update cache
+        saveDonors(donors);
     }
     
     let filtered = filter === 'all' ? donors : donors.filter(d => (d.bloodGroup || d.blood_group) === filter);
@@ -678,7 +708,6 @@ async function updateStats() {
     let donationsCount = getDonations().length;
     let certificatesCount = getCertificates().length;
 
-    // Fetch live stats from Neon API
     const res = await API.getStats();
     if (res.ok && res.stats) {
         donorsCount = res.stats.totalDonors || donorsCount;
@@ -717,7 +746,6 @@ function showAdminDashboard() {
     if (adminLogin) adminLogin.style.display = 'none';
     if (adminDashboard) adminDashboard.style.display = 'block';
     
-    // Check DB status on dashboard show
     updateDbStatusBadge();
 }
 
@@ -787,13 +815,13 @@ if (adminLoginForm) {
                 adminLoginForm.reset();
                 renderAdminDonorTable();
                 renderAdminDonationTable();
+                renderAdminGalleryPreview();
                 renderAdminCertificateTable();
                 updateStats();
                 populateCertificateDonationSelect();
                 if (loginMessage) loginMessage.style.display = 'none';
             }, 400);
         } else {
-            // Local fallback check
             const storedUser = localStorage.getItem('chavali_admin_username') || 'admin';
             const storedPass = localStorage.getItem('chavali_admin_password') || 'admin123';
 
@@ -802,6 +830,7 @@ if (adminLoginForm) {
                 showAdminDashboard();
                 renderAdminDonorTable();
                 renderAdminDonationTable();
+                renderAdminGalleryPreview();
                 renderAdminCertificateTable();
                 updateStats();
                 populateCertificateDonationSelect();
@@ -852,6 +881,10 @@ if (adminTabs.length > 0) {
             tab.classList.add('active');
             const target = document.getElementById(tab.dataset.tab);
             if (target) target.classList.add('active');
+
+            if (tab.dataset.tab === 'adminGallery') {
+                renderAdminGalleryPreview();
+            }
         });
     });
 }
@@ -923,7 +956,7 @@ async function renderAdminDonationTable() {
             <td>${d.number}</td>
             <td><span class="donor-blood">${d.bloodGroup}</span></td>
             <td>${d.date}</td>
-            <td>${d.image ? '<img src="' + d.image + '" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" alt="Donation Image">' : 'No Image'}</td>
+            <td>${d.image ? '<img src="' + d.image + '" style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;" onclick="openLightbox(\'' + d.image + '\')" alt="Donation Image">' : 'No Image'}</td>
             <td><button class="delete-btn" onclick="deleteDonation(${d.id})">Delete</button></td>
             <td><button class="edit-btn" onclick="editDonation(${d.id})">Edit</button></td>
         </tr>
@@ -949,11 +982,12 @@ window.editDonation = function(id) {
                 <div style="display:flex; align-items:center; gap:12px; padding:12px; background:#f0f0f0; border-radius:8px;">
                     <img src="${donation.image}" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
                     <div>
-                        <p style="margin:0; font-weight:500;">Current Image</p>
+                        <p style="margin:0; font-weight:500;">Current Image in Neon DB</p>
                         <p style="margin:4px 0 0 0; font-size:0.85rem; color:#666;">Upload new image to replace</p>
                     </div>
                 </div>
             `;
+            if (addDonationForm) addDonationForm.donationImage = donation.image;
         }
     }
 
@@ -981,12 +1015,14 @@ window.deleteDonation = async function(id) {
         saveDonations(donations);
         renderAdminDonationTable();
         updateStats();
+        renderDonationSlider();
     }
 };
 
-// ==================== ADMIN: ADD / EDIT DONATION FORM ====================
+// ==================== ADMIN: DONATION IMAGE UPLOAD & SUBMISSION ====================
 const addDonationForm = document.getElementById('adminAddDonationForm');
 const donationImageInput = document.getElementById('donationImageInput');
+const donationImageUploadArea = document.getElementById('donationImageUploadArea');
 const addDonorPhoneInput = document.getElementById('addDonorPhone');
 const donorPhoneList = document.getElementById('donorPhoneList');
 
@@ -1029,42 +1065,68 @@ if (addDonorPhoneInput) {
     });
 }
 
-const donationImageUploadArea = document.getElementById('donationImageUploadArea');
+// Donation photo drag & drop and click handlers
 if (donationImageUploadArea) {
     donationImageUploadArea.addEventListener('click', () => donationImageInput?.click());
-}
 
-if (donationImageInput) {
-    donationImageInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files[0]) {
-            handleDonationImageFile(e.target.files[0]);
+    donationImageUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        donationImageUploadArea.style.borderColor = 'var(--primary, #dc2626)';
+        donationImageUploadArea.style.background = '#fee2e2';
+    });
+
+    donationImageUploadArea.addEventListener('dragleave', () => {
+        donationImageUploadArea.style.borderColor = '#ddd';
+        donationImageUploadArea.style.background = '#f9f9f9';
+    });
+
+    donationImageUploadArea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        donationImageUploadArea.style.borderColor = '#ddd';
+        donationImageUploadArea.style.background = '#f9f9f9';
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            await handleDonationImageFile(e.dataTransfer.files[0]);
         }
     });
 }
 
-function handleDonationImageFile(file) {
-    if (file.size > 5 * 1024 * 1024) {
-        showAddDonationMessage('File size must be less than 5MB!', 'error');
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
+if (donationImageInput) {
+    donationImageInput.addEventListener('change', async (e) => {
+        if (e.target.files && e.target.files[0]) {
+            await handleDonationImageFile(e.target.files[0]);
+        }
+    });
+}
+
+async function handleDonationImageFile(file) {
+    try {
         const preview = document.getElementById('donationImagePreview');
         if (preview) {
+            preview.innerHTML = `<div style="padding:10px; color:#2563eb; font-weight:500;">⏳ Compressing photo for Neon DB...</div>`;
+        }
+
+        // Auto compress image
+        const compressedBase64 = await compressImage(file, 1200, 1200, 0.85);
+
+        if (preview) {
             preview.innerHTML = `
-                <div style="display:flex; align-items:center; gap:12px; padding:12px; background:#f0f0f0; border-radius:8px;">
-                    <img src="${e.target.result}" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
+                <div style="display:flex; align-items:center; gap:12px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">
+                    <img src="${compressedBase64}" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
                     <div>
-                        <p style="margin:0; font-weight:500;">Image selected</p>
+                        <p style="margin:0; font-weight:600; color:#166534;">✓ Photo ready to save in Neon DB</p>
                         <p style="margin:4px 0 0 0; font-size:0.85rem; color:#666;">${file.name}</p>
                         <button type="button" style="margin-top:6px; padding:4px 12px; background:#DC2626; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85rem;" onclick="clearDonationImage()">Remove</button>
                     </div>
                 </div>
             `;
-            if (addDonationForm) addDonationForm.donationImage = e.target.result;
         }
-    };
-    reader.readAsDataURL(file);
+
+        if (addDonationForm) {
+            addDonationForm.donationImage = compressedBase64;
+        }
+    } catch (err) {
+        showAddDonationMessage(`Image processing error: ${err.message}`, 'error');
+    }
 }
 
 window.clearDonationImage = function() {
@@ -1090,6 +1152,13 @@ if (addDonationForm) {
             showAddDonationMessage('Please fill all required fields', 'error');
             return;
         }
+
+        const submitBtn = addDonationForm.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving to Neon DB...';
+        }
         
         const isEditing = addDonationForm.editingId;
         const donationPayload = {
@@ -1110,7 +1179,7 @@ if (addDonationForm) {
                 donations[idx] = { ...donations[idx], ...donationPayload, updatedAt: new Date().toISOString() };
                 saveDonations(donations);
             }
-            showAddDonationMessage('Donation updated successfully!', 'success');
+            showAddDonationMessage('Donation updated successfully in Neon DB!', 'success');
         } else {
             const apiRes = await API.createDonation(donationPayload);
             let donations = getDonations();
@@ -1121,7 +1190,12 @@ if (addDonationForm) {
             };
             donations.push(newRecord);
             saveDonations(donations);
-            showAddDonationMessage('Donation recorded successfully in Neon DB!', 'success');
+            showAddDonationMessage('Donation and photo saved successfully in Neon DB!', 'success');
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
         }
 
         upsertDonorFromDonation({
@@ -1177,6 +1251,139 @@ function showAddDonationMessage(message, type) {
     messageEl.style.color = type === 'success' ? '#166534' : '#991b1b';
     messageEl.style.border = type === 'success' ? '1px solid #86efac' : '1px solid #fca5a5';
 }
+
+// ==================== ADMIN: GALLERY MANAGEMENT & PHOTO UPLOADS ====================
+const galleryUploadArea = document.getElementById('galleryUploadArea');
+const galleryFileInput = document.getElementById('galleryFileInput');
+const galleryCaption = document.getElementById('galleryCaption');
+const galleryUploadProgress = document.getElementById('galleryUploadProgress');
+
+if (galleryUploadArea) {
+    galleryUploadArea.addEventListener('click', () => galleryFileInput?.click());
+
+    galleryUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        galleryUploadArea.style.borderColor = 'var(--primary, #dc2626)';
+        galleryUploadArea.style.background = '#fee2e2';
+    });
+
+    galleryUploadArea.addEventListener('dragleave', () => {
+        galleryUploadArea.style.borderColor = '#ddd';
+        galleryUploadArea.style.background = '#f9f9f9';
+    });
+
+    galleryUploadArea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        galleryUploadArea.style.borderColor = '#ddd';
+        galleryUploadArea.style.background = '#f9f9f9';
+        if (e.dataTransfer.files) {
+            await handleGalleryUpload(e.dataTransfer.files);
+        }
+    });
+}
+
+if (galleryFileInput) {
+    galleryFileInput.addEventListener('change', async (e) => {
+        if (e.target.files) {
+            await handleGalleryUpload(e.target.files);
+            e.target.value = '';
+        }
+    });
+}
+
+async function handleGalleryUpload(files) {
+    if (!files || files.length === 0) return;
+
+    const caption = (galleryCaption ? galleryCaption.value.trim() : '') || 'Blood Donation Activity';
+
+    if (galleryUploadProgress) {
+        galleryUploadProgress.style.display = 'block';
+        galleryUploadProgress.textContent = '⏳ Compressing and saving photo to Neon DB...';
+    }
+
+    try {
+        for (const file of Array.from(files)) {
+            const compressedBase64 = await compressImage(file, 1200, 1200, 0.85);
+
+            // Save to Neon DB
+            const res = await API.addGallery({
+                data: compressedBase64,
+                caption,
+                category: 'general'
+            });
+
+            // Update local cache
+            const gallery = getGalleryImages();
+            gallery.push({
+                id: res.data?.id || Date.now(),
+                data: compressedBase64,
+                caption,
+                uploadedAt: new Date().toISOString()
+            });
+            saveGalleryImages(gallery);
+        }
+
+        if (galleryCaption) galleryCaption.value = '';
+        if (galleryUploadProgress) {
+            galleryUploadProgress.style.background = '#dcfce7';
+            galleryUploadProgress.style.color = '#166534';
+            galleryUploadProgress.textContent = '✓ Photo successfully saved in Neon PostgreSQL!';
+            setTimeout(() => {
+                galleryUploadProgress.style.display = 'none';
+                galleryUploadProgress.style.background = '#eff6ff';
+                galleryUploadProgress.style.color = '#1e40af';
+            }, 3000);
+        }
+
+        renderAdminGalleryPreview();
+        renderGallery();
+        updateStats();
+    } catch (err) {
+        if (galleryUploadProgress) {
+            galleryUploadProgress.style.background = '#fee2e2';
+            galleryUploadProgress.style.color = '#991b1b';
+            galleryUploadProgress.textContent = `❌ Upload failed: ${err.message}`;
+        }
+    }
+}
+
+async function renderAdminGalleryPreview() {
+    const preview = document.getElementById('adminGalleryPreview');
+    if (!preview) return;
+
+    let gallery = getGalleryImages();
+    const res = await API.getGallery();
+    if (res.ok && Array.isArray(res.data)) {
+        gallery = res.data;
+        saveGalleryImages(gallery);
+    }
+
+    if (gallery.length === 0) {
+        preview.innerHTML = '<p style="color:#999; grid-column:1/-1; text-align:center; padding:20px;">No gallery photos uploaded yet</p>';
+        return;
+    }
+
+    preview.innerHTML = gallery.map(img => `
+        <div style="position:relative; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.05); background:#fff;">
+            <img src="${img.data || img.image_data || ''}" alt="${img.caption}" style="width:100%; height:140px; object-fit:cover; display:block;">
+            <div style="padding:8px 10px;">
+                <p style="margin:0; font-size:0.85rem; font-weight:500; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${img.caption || 'Blood Activity'}</p>
+            </div>
+            <button onclick="deleteGalleryPhoto(${img.id})" style="position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%; background:rgba(220,38,38,0.9); color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;" title="Delete Photo">✕</button>
+        </div>
+    `).join('');
+}
+
+window.deleteGalleryPhoto = async function(id) {
+    if (confirm('Are you sure you want to delete this photo from Neon DB?')) {
+        await API.deleteGallery(id);
+        let gallery = getGalleryImages().filter(g => g.id !== id);
+        saveGalleryImages(gallery);
+        renderAdminGalleryPreview();
+        renderGallery();
+        updateStats();
+    }
+};
 
 // ==================== CERTIFICATE GENERATOR ====================
 function populateCertificateDonationSelect() {
@@ -1324,7 +1531,6 @@ function showCertificateMessage(message, type) {
     messageEl.style.color = type === 'success' ? '#166534' : '#991b1b';
 }
 
-// Download & Print Certificate
 function downloadCertificate() {
     const container = document.getElementById('certificateContainer');
     if (!container || typeof html2canvas === 'undefined') {
@@ -1484,6 +1690,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showAdminDashboard();
             renderAdminDonorTable();
             renderAdminDonationTable();
+            renderAdminGalleryPreview();
             renderAdminCertificateTable();
             populateCertificateDonationSelect();
         } else {

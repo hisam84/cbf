@@ -104,6 +104,7 @@
                 <button class="admin-tab active" data-tab="adminDonors">Donor List</button>
                 <button class="admin-tab" data-tab="adminDonationList">Donation List</button>
                 <button class="admin-tab" data-tab="adminAddDonation">Add Donation</button>
+                <button class="admin-tab" data-tab="adminGallery">Gallery Photos</button>
                 <button class="admin-tab" data-tab="adminCertificateGenerator">Generate Certificate</button>
                 <button class="admin-tab" data-tab="adminCertificateList">Certificate List</button>
                 <button class="admin-tab" data-tab="adminChangePassword">Change Password</button>
@@ -211,6 +212,33 @@
                     <button type="button" class="cancel-btn" id="cancelDonationBtn" style="display:none; margin-left:10px; padding:12px 24px; background:#6b7280; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
                 </form>
                 <div id="addDonationMessage" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
+            </div>
+
+            <div class="admin-panel" id="adminGallery">
+                <h3>Photo Gallery Management</h3>
+                <div style="max-width:700px; margin-bottom:30px;">
+                    <div class="form-group">
+                        <label for="galleryCaption">Photo Caption / Activity Title</label>
+                        <input type="text" id="galleryCaption" placeholder="e.g., Blood Donation Campaign at Sadar Hospital">
+                    </div>
+                    <div class="form-group">
+                        <label>Upload Photo</label>
+                        <div class="donation-upload-area" id="galleryUploadArea" style="border:2px dashed #ddd; padding:25px; border-radius:8px; text-align:center; cursor:pointer; background:#f9f9f9; transition:0.3s;">
+                            <div style="font-size:2.2rem; margin-bottom:8px;">📷</div>
+                            <p style="margin:0; font-size:1rem; font-weight:600; color:#374151;">Click to choose photo or drag & drop</p>
+                            <p style="font-size:0.85rem; margin-top:4px; color:#9ca3af;">Auto-compressed & saved to Neon PostgreSQL</p>
+                            <input type="file" id="galleryFileInput" accept="image/*" style="display:none;">
+                        </div>
+                    </div>
+                    <div id="galleryUploadProgress" style="display:none; margin-top:12px; padding:10px; border-radius:6px; background:#eff6ff; color:#1e40af; font-size:0.9rem;">
+                        ⏳ Processing and uploading photo to Neon DB...
+                    </div>
+                </div>
+
+                <h4>Current Gallery Photos in Neon Database</h4>
+                <div id="adminGalleryPreview" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:16px; margin-top:16px;">
+                    <!-- Gallery thumbnails with delete buttons will render here -->
+                </div>
             </div>
 
             <div class="admin-panel" id="adminCertificateGenerator">
