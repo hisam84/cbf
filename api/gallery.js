@@ -10,23 +10,38 @@ const { requireAdminAuth } = require('../lib/auth');
 
 /**
  * GET /api/gallery
- * Public endpoint to list all gallery photos, newest first
+ * Public endpoint to list all gallery photos and donation activity photos from Neon DB
  */
 router.get('/', async (req, res) => {
     try {
         if (isConfigured()) {
             const sql = getSql();
-            const images = await sql`
-                SELECT id, caption, image_data as "data", category, uploaded_at as "uploadedAt"
-                FROM gallery
-                ORDER BY uploaded_at DESC;
-            `;
+
+            const [galleryImages, donationImages] = await Promise.all([
+                sql`
+                    SELECT id, caption, image_data as "data", category, uploaded_at as "uploadedAt"
+                    FROM gallery
+                    ORDER BY uploaded_at DESC;
+                `,
+                sql`
+                    SELECT id, 
+                           CONCAT('রক্তদান কার্যক্রম: ', donor_name, ' (', blood_group, ')') as caption, 
+                           image as "data", 
+                           'donation' as category, 
+                           added_at as "uploadedAt"
+                    FROM donations
+                    WHERE image IS NOT NULL AND image != ''
+                    ORDER BY date DESC, added_at DESC;
+                `
+            ]);
+
+            const allImages = [...galleryImages, ...donationImages];
 
             return res.json({
                 success: true,
                 source: 'neon_postgres',
-                count: images.length,
-                data: images
+                count: allImages.length,
+                data: allImages
             });
         }
 
@@ -48,8 +63,7 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/gallery
- * Admin endpoint to upload new image to gallery
- * Body: { data: base64_or_url, caption, category }
+ * Admin endpoint to upload new image to gallery in Neon DB
  */
 router.post('/', requireAdminAuth, async (req, res) => {
     try {

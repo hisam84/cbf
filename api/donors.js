@@ -1,6 +1,6 @@
 // ==============================================================================
 // Donors API Endpoints (রক্তদাতা ব্যবস্থাপনা)
-// CRUD for registered blood donors in Neon PostgreSQL
+// CRUD for registered blood donors in Neon PostgreSQL with live cloud photos
 // ==============================================================================
 
 const express = require('express');
@@ -11,7 +11,7 @@ const { normalizePhone, isValidBloodGroup } = require('../lib/validators');
 
 /**
  * GET /api/donors
- * Public endpoint to list donors, optionally filtered by blood group or search
+ * Public endpoint to list donors with their cloud photos, optionally filtered by blood group or search
  */
 router.get('/', async (req, res) => {
     try {
@@ -23,27 +23,39 @@ router.get('/', async (req, res) => {
 
             if (bloodGroup && bloodGroup !== 'all') {
                 donors = await sql`
-                    SELECT id, name, mobile, blood_group as "bloodGroup", address, 
-                           last_donation as "lastDonation", gender, dob, registered_at as "registeredAt"
-                    FROM donors 
-                    WHERE blood_group = ${bloodGroup}
-                    ORDER BY last_donation DESC NULLS LAST, registered_at DESC;
+                    SELECT d.id, d.name, d.mobile, d.blood_group as "bloodGroup", d.address, 
+                           d.last_donation as "lastDonation", d.gender, d.dob, d.registered_at as "registeredAt",
+                           (SELECT dn.image FROM donations dn 
+                            WHERE (dn.donor_phone = d.mobile OR dn.donor_name = d.name) 
+                              AND dn.image IS NOT NULL AND dn.image != '' 
+                            ORDER BY dn.date DESC, dn.added_at DESC LIMIT 1) as "image"
+                    FROM donors d
+                    WHERE d.blood_group = ${bloodGroup}
+                    ORDER BY d.last_donation DESC NULLS LAST, d.registered_at DESC;
                 `;
             } else if (search) {
                 const term = `%${search.trim()}%`;
                 donors = await sql`
-                    SELECT id, name, mobile, blood_group as "bloodGroup", address, 
-                           last_donation as "lastDonation", gender, dob, registered_at as "registeredAt"
-                    FROM donors 
-                    WHERE name ILIKE ${term} OR mobile ILIKE ${term} OR address ILIKE ${term}
-                    ORDER BY last_donation DESC NULLS LAST, registered_at DESC;
+                    SELECT d.id, d.name, d.mobile, d.blood_group as "bloodGroup", d.address, 
+                           d.last_donation as "lastDonation", d.gender, d.dob, d.registered_at as "registeredAt",
+                           (SELECT dn.image FROM donations dn 
+                            WHERE (dn.donor_phone = d.mobile OR dn.donor_name = d.name) 
+                              AND dn.image IS NOT NULL AND dn.image != '' 
+                            ORDER BY dn.date DESC, dn.added_at DESC LIMIT 1) as "image"
+                    FROM donors d
+                    WHERE d.name ILIKE ${term} OR d.mobile ILIKE ${term} OR d.address ILIKE ${term}
+                    ORDER BY d.last_donation DESC NULLS LAST, d.registered_at DESC;
                 `;
             } else {
                 donors = await sql`
-                    SELECT id, name, mobile, blood_group as "bloodGroup", address, 
-                           last_donation as "lastDonation", gender, dob, registered_at as "registeredAt"
-                    FROM donors 
-                    ORDER BY last_donation DESC NULLS LAST, registered_at DESC;
+                    SELECT d.id, d.name, d.mobile, d.blood_group as "bloodGroup", d.address, 
+                           d.last_donation as "lastDonation", d.gender, d.dob, d.registered_at as "registeredAt",
+                           (SELECT dn.image FROM donations dn 
+                            WHERE (dn.donor_phone = d.mobile OR dn.donor_name = d.name) 
+                              AND dn.image IS NOT NULL AND dn.image != '' 
+                            ORDER BY dn.date DESC, dn.added_at DESC LIMIT 1) as "image"
+                    FROM donors d
+                    ORDER BY d.last_donation DESC NULLS LAST, d.registered_at DESC;
                 `;
             }
 
@@ -55,7 +67,6 @@ router.get('/', async (req, res) => {
             });
         }
 
-        // Return empty or fallback data if database not yet configured
         return res.json({
             success: true,
             source: 'unconfigured',
@@ -93,12 +104,10 @@ router.post('/', async (req, res) => {
         if (isConfigured()) {
             const sql = getSql();
 
-            // Check if donor with this mobile already exists
             const existing = await sql`SELECT id FROM donors WHERE mobile = ${normalized} OR mobile = ${mobile.trim()};`;
 
             let savedDonor;
             if (existing.length > 0) {
-                // Update existing record
                 const updated = await sql`
                     UPDATE donors 
                     SET name = ${name.trim()},
@@ -111,7 +120,6 @@ router.post('/', async (req, res) => {
                 `;
                 savedDonor = updated[0];
             } else {
-                // Insert new donor
                 const inserted = await sql`
                     INSERT INTO donors (name, mobile, blood_group, address, last_donation, gender, dob)
                     VALUES (${name.trim()}, ${normalized || mobile.trim()}, ${formattedBloodGroup}, ${address.trim()}, ${lastDonation || null}, ${gender || null}, ${dob || null})
@@ -127,7 +135,6 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Mock response if database not configured yet
         return res.status(201).json({
             success: true,
             message: 'Donor registered (local mode)',
