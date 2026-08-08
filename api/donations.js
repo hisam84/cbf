@@ -140,10 +140,10 @@ app.post(['/', '/api/donations', '/donations'], requireAdminAuth, async (req, re
  */
 app.put(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
+        const rawId = req.params.id;
         const { donorName, donorPhone, donorAddress, number, bloodGroup, date, image, notes } = req.body || {};
 
-        if (!id) {
+        if (!rawId) {
             return res.status(400).json({ success: false, message: 'Valid donation ID is required' });
         }
 
@@ -162,7 +162,7 @@ app.put(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, asyn
                     image = COALESCE(${image !== undefined ? image : null}, image),
                     notes = COALESCE(${notes !== undefined ? notes : null}, notes),
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = ${id}
+                WHERE id::text = ${String(rawId)} OR number = ${String(rawId)}
                 RETURNING id, donor_name as "donorName", donor_phone as "donorPhone", donor_address as "donorAddress", number, blood_group as "bloodGroup", date, image, notes, updated_at as "updatedAt";
             `;
 
@@ -190,31 +190,31 @@ app.put(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, asyn
 
 /**
  * DELETE /api/donations/:id
- * Admin endpoint to delete a donation record
+ * Admin endpoint to delete a donation record by ID or Number
  */
 app.delete(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        if (!id) {
+        const rawId = req.params.id;
+        if (!rawId) {
             return res.status(400).json({ success: false, message: 'Invalid donation ID' });
         }
 
         if (isConfigured()) {
             const sql = getSql();
-            const deleted = await sql`DELETE FROM donations WHERE id = ${id} RETURNING id;`;
+            const deleted = await sql`DELETE FROM donations WHERE id::text = ${String(rawId)} OR number = ${String(rawId)} RETURNING id;`;
 
             if (deleted.length === 0) {
-                return res.status(404).json({ success: false, message: 'Donation record not found' });
+                return res.status(404).json({ success: false, message: 'Donation record not found in database' });
             }
 
             return res.json({
                 success: true,
                 message: 'Donation record deleted successfully from database',
-                deletedId: id
+                deletedId: rawId
             });
         }
 
-        return res.json({ success: true, message: 'Donation deleted (local mode)', deletedId: id });
+        return res.json({ success: true, message: 'Donation deleted (local mode)', deletedId: rawId });
     } catch (err) {
         console.error('Error deleting donation:', err);
         return res.status(500).json({
