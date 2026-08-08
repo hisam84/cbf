@@ -4,16 +4,21 @@
 // ==============================================================================
 
 const express = require('express');
-const router = express.Router();
+const cors = require('cors');
 const { isConfigured, getSql } = require('../lib/db');
 const { requireAdminAuth } = require('../lib/auth');
 const { normalizePhone } = require('../lib/validators');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 
 /**
  * GET /api/donations
  * Public endpoint to list all donation records, sorted newest first
  */
-router.get('/', async (req, res) => {
+app.get(['/', '/api/donations', '/donations'], async (req, res) => {
     try {
         if (isConfigured()) {
             const sql = getSql();
@@ -54,7 +59,7 @@ router.get('/', async (req, res) => {
  * Admin endpoint to record a new blood donation
  * Automatically updates/creates donor record in donors table
  */
-router.post('/', requireAdminAuth, async (req, res) => {
+app.post(['/', '/api/donations', '/donations'], requireAdminAuth, async (req, res) => {
     try {
         const { donorName, donorPhone, donorAddress, number, bloodGroup, date, image, notes } = req.body || {};
 
@@ -133,7 +138,7 @@ router.post('/', requireAdminAuth, async (req, res) => {
  * PUT /api/donations/:id
  * Admin endpoint to edit an existing donation record
  */
-router.put('/:id', requireAdminAuth, async (req, res) => {
+app.put(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         const { donorName, donorPhone, donorAddress, number, bloodGroup, date, image, notes } = req.body || {};
@@ -187,7 +192,7 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
  * DELETE /api/donations/:id
  * Admin endpoint to delete a donation record
  */
-router.delete('/:id', requireAdminAuth, async (req, res) => {
+app.delete(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (!id) {
@@ -220,4 +225,4 @@ router.delete('/:id', requireAdminAuth, async (req, res) => {
     }
 });
 
-module.exports = router;
+module.exports = app;

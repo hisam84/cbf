@@ -4,16 +4,21 @@
 // ==============================================================================
 
 const express = require('express');
-const router = express.Router();
+const cors = require('cors');
 const { isConfigured, getSql } = require('../lib/db');
 const { requireAdminAuth } = require('../lib/auth');
 const { normalizePhone, isValidBloodGroup } = require('../lib/validators');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 
 /**
  * GET /api/donors
  * Public endpoint to list donors with their cloud photos, optionally filtered by blood group or search
  */
-router.get('/', async (req, res) => {
+app.get(['/', '/api/donors', '/donors'], async (req, res) => {
     try {
         const { bloodGroup, search } = req.query;
 
@@ -87,7 +92,7 @@ router.get('/', async (req, res) => {
  * POST /api/donors
  * Register a new donor or upsert if mobile number already exists
  */
-router.post('/', async (req, res) => {
+app.post(['/', '/api/donors', '/donors'], async (req, res) => {
     try {
         const { name, mobile, bloodGroup, address, lastDonation, gender, dob } = req.body || {};
 
@@ -162,7 +167,7 @@ router.post('/', async (req, res) => {
  * PUT /api/donors/:id
  * Admin update for an existing donor
  */
-router.put('/:id', requireAdminAuth, async (req, res) => {
+app.put(['/:id', '/api/donors/:id', '/donors/:id'], requireAdminAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         const { name, mobile, bloodGroup, address, lastDonation } = req.body || {};
@@ -209,7 +214,7 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
  * DELETE /api/donors/:id
  * Protected admin endpoint to delete a donor
  */
-router.delete('/:id', requireAdminAuth, async (req, res) => {
+app.delete(['/:id', '/api/donors/:id', '/donors/:id'], requireAdminAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (!id) {
@@ -238,4 +243,4 @@ router.delete('/:id', requireAdminAuth, async (req, res) => {
     }
 });
 
-module.exports = router;
+module.exports = app;
