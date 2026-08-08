@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Donation Certificate - Chavali Blood Foundation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Noto Sans Bengali', Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        .certificate-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .certificate-header {
+            background: #dc2626;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .certificate-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .certificate-content {
+            padding: 40px;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-button:hover {
+            background: #b91c1c;
+        }
+        .certificate-preview {
+            text-align: center;
+        }
+        .actions {
+            text-align: center;
+            padding: 20px;
+            background: #f9f9f9;
+            border-top: 1px solid #e5e7eb;
+        }
+        .btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+        .btn:hover {
+            background: #b91c1c;
+        }
+        .btn-secondary {
+            background: #6b7280;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        .error-message {
+            text-align: center;
+            padding: 50px;
+            color: #dc2626;
+            font-size: 1.2rem;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back to Admin</a>
+
+    <div class="certificate-container">
+        <div class="certificate-header">
+            <h1>Chavali Blood Foundation - Blood Donation Certificate</h1>
+        </div>
+
+        <div class="certificate-content">
+            <div id="certificateDisplay" class="certificate-preview">
+                <!-- Certificate will be loaded here -->
+            </div>
+        </div>
+
+        <div class="actions" id="certificateActions" style="display: none;">
+            <button id="downloadCertificateBtn" class="btn">Download Certificate</button>
+            <button id="printCertificateBtn" class="btn btn-secondary">Print Certificate</button>
+        </div>
+    </div>
+
+    <script>
+        // Get certificate ID from URL parameters
+        function getCertificateId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        // Load and display certificate
+        function loadCertificate() {
+            const certificateId = getCertificateId();
+            if (!certificateId) {
+                showError('Certificate ID not found');
+                return;
+            }
+
+            try {
+                const certificates = JSON.parse(localStorage.getItem('chavali_certificates') || '[]');
+                const certificate = certificates.find(c => c.id == certificateId);
+
+                if (!certificate) {
+                    showError('Certificate not found');
+                    return;
+                }
+
+                displayCertificate(certificate);
+            } catch (error) {
+                console.error('Error loading certificate:', error);
+                showError('Error loading certificate');
+            }
+        }
+
+        // Display certificate content
+        function displayCertificate(certificate) {
+            const displayDiv = document.getElementById('certificateDisplay');
+            displayDiv.innerHTML = certificate.htmlContent;
+            document.getElementById('certificateActions').style.display = 'block';
+        }
+
+        // Show error message
+        function showError(message) {
+            const displayDiv = document.getElementById('certificateDisplay');
+            displayDiv.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+
+        // Download certificate
+        function downloadCertificate() {
+            const certificateDisplay = document.getElementById('certificateDisplay');
+            if (!certificateDisplay) return;
+
+            html2canvas(certificateDisplay, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                width: 800,
+                height: certificateDisplay.scrollHeight
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'blood_donation_certificate.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error('Error generating certificate image:', err);
+                alert('Error generating certificate. Please try again.');
+            });
+        }
+
+        // Print certificate
+        function printCertificate() {
+            const certificateDisplay = document.getElementById('certificateDisplay');
+            if (!certificateDisplay) return;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Blood Donation Certificate</title>
+                        <style>
+                            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                            .certificate { max-width: 800px; margin: 0 auto; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="certificate">
+                            ${certificateDisplay.innerHTML}
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Event listeners
+        document.getElementById('downloadCertificateBtn').addEventListener('click', downloadCertificate);
+        document.getElementById('printCertificateBtn').addEventListener('click', printCertificate);
+
+        // Load certificate on page load
+        document.addEventListener('DOMContentLoaded', loadCertificate);
+    </script>
+</body>
+</html>

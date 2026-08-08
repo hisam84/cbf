@@ -1,0 +1,25 @@
+{
+  "name": "chavali-blood-foundation",
+  "version": "1.0.0",
+  "description": "Chavali Blood Foundation (চাঁভালি রক্ত ফাউন্ডেশন) - Voluntary Blood Donation Management Platform",
+  "main": "index.html",
+  "scripts": {
+    "dev": "serve . -p 3000",
+    "start": "serve . -p 3000",
+    "preview": "serve .",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "blood-donation",
+    "blood-foundation",
+    "chavali",
+    "voluntary-organization",
+    "bangladesh",
+    "health"
+  ],
+  "author": "Chavali Blood Foundation",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}
