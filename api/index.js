@@ -20,7 +20,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Mount API routes
+// Import route handlers
 const authRouter = require('./auth');
 const donorsRouter = require('./donors');
 const donationsRouter = require('./donations');
@@ -30,36 +30,22 @@ const statsRouter = require('./stats');
 const contactRouter = require('./contact');
 const healthRouter = require('./health');
 
-// Dual mount: matches both /api/health and /health on Vercel
-app.use('/api/auth', authRouter);
-app.use('/auth', authRouter);
+// Dual mount: matches both with /api prefix and without /api prefix
+app.use(['/api/auth', '/auth'], authRouter);
+app.use(['/api/donors', '/donors'], donorsRouter);
+app.use(['/api/donations', '/donations'], donationsRouter);
+app.use(['/api/gallery', '/gallery'], galleryRouter);
+app.use(['/api/certificates', '/certificates'], certificatesRouter);
+app.use(['/api/stats', '/stats'], statsRouter);
+app.use(['/api/contact', '/contact'], contactRouter);
+app.use(['/api/health', '/health'], healthRouter);
 
-app.use('/api/donors', donorsRouter);
-app.use('/donors', donorsRouter);
-
-app.use('/api/donations', donationsRouter);
-app.use('/donations', donationsRouter);
-
-app.use('/api/gallery', galleryRouter);
-app.use('/gallery', galleryRouter);
-
-app.use('/api/certificates', certificatesRouter);
-app.use('/certificates', certificatesRouter);
-
-app.use('/api/stats', statsRouter);
-app.use('/stats', statsRouter);
-
-app.use('/api/contact', contactRouter);
-app.use('/contact', contactRouter);
-
-app.use('/api/health', healthRouter);
-app.use('/health', healthRouter);
-
-// Fallback root for /api
+// Root diagnostic endpoint
 app.get(['/api', '/'], (req, res) => {
     res.json({
         message: 'Chavali Blood Foundation API with Neon PostgreSQL is running',
         version: '1.1.0',
+        status: 'online',
         endpoints: [
             '/api/health',
             '/api/stats',

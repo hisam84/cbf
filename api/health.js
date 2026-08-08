@@ -1,17 +1,19 @@
 // ==============================================================================
 // Health & Diagnostics API Endpoint
 // Inspects Neon database connectivity, latency, tables, and server status
+// Works as both standalone Vercel function and Express router
 // ==============================================================================
 
 const express = require('express');
-const router = express.Router();
+const cors = require('cors');
 const { checkDbConnection } = require('../lib/db');
+require('dotenv').config();
 
-/**
- * GET /api/health
- * Public health & database diagnostic check
- */
-router.get('/', async (req, res) => {
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+async function handleHealth(req, res) {
     try {
         const dbStatus = await checkDbConnection();
 
@@ -35,6 +37,8 @@ router.get('/', async (req, res) => {
             error: err.message
         });
     }
-});
+}
 
-module.exports = router;
+app.get(['/', '/health', '/api/health'], handleHealth);
+
+module.exports = app;

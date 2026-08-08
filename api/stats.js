@@ -4,19 +4,19 @@
 // ==============================================================================
 
 const express = require('express');
-const router = express.Router();
+const cors = require('cors');
 const { isConfigured, getSql } = require('../lib/db');
+require('dotenv').config();
 
-/**
- * GET /api/stats
- * Public endpoint for homepage and admin overview counters
- */
-router.get('/', async (req, res) => {
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+async function handleStats(req, res) {
     try {
         if (isConfigured()) {
             const sql = getSql();
 
-            // Run aggregation queries in parallel for speed
             const [
                 [donorsCount],
                 [donationsCount],
@@ -66,6 +66,8 @@ router.get('/', async (req, res) => {
             error: err.message
         });
     }
-});
+}
 
-module.exports = router;
+app.get(['/', '/stats', '/api/stats'], handleStats);
+
+module.exports = app;
