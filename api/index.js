@@ -30,17 +30,33 @@ const statsRouter = require('./stats');
 const contactRouter = require('./contact');
 const healthRouter = require('./health');
 
+// Dual mount: matches both /api/health and /health on Vercel
 app.use('/api/auth', authRouter);
+app.use('/auth', authRouter);
+
 app.use('/api/donors', donorsRouter);
+app.use('/donors', donorsRouter);
+
 app.use('/api/donations', donationsRouter);
+app.use('/donations', donationsRouter);
+
 app.use('/api/gallery', galleryRouter);
+app.use('/gallery', galleryRouter);
+
 app.use('/api/certificates', certificatesRouter);
+app.use('/certificates', certificatesRouter);
+
 app.use('/api/stats', statsRouter);
+app.use('/stats', statsRouter);
+
 app.use('/api/contact', contactRouter);
+app.use('/contact', contactRouter);
+
 app.use('/api/health', healthRouter);
+app.use('/health', healthRouter);
 
 // Fallback root for /api
-app.get('/api', (req, res) => {
+app.get(['/api', '/'], (req, res) => {
     res.json({
         message: 'Chavali Blood Foundation API with Neon PostgreSQL is running',
         version: '1.1.0',
