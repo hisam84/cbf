@@ -1,24 +1,36 @@
 {
   "name": "chavali-blood-foundation",
-  "version": "1.0.0",
-  "description": "Chavali Blood Foundation (চাঁভালি রক্ত ফাউন্ডেশন) - Voluntary Blood Donation Management Platform",
-  "main": "index.html",
+  "version": "1.1.0",
+  "description": "Chavali Blood Foundation (চাঁভালি রক্ত ফাউন্ডেশন) - Voluntary Blood Donation Management Platform with Neon PostgreSQL Backend",
+  "main": "server.js",
   "scripts": {
-    "dev": "serve . -p 3000",
-    "start": "serve . -p 3000",
+    "start": "node server.js",
+    "dev": "node server.js",
     "preview": "serve .",
+    "db:init": "node scripts/init-db.js",
+    "db:seed": "node scripts/seed-db.js",
+    "db:test": "node scripts/test-db.js",
     "deploy": "vercel --prod"
   },
   "keywords": [
     "blood-donation",
     "blood-foundation",
     "chavali",
-    "voluntary-organization",
+    "neon-database",
+    "postgresql",
     "bangladesh",
     "health"
   ],
   "author": "Chavali Blood Foundation",
   "license": "MIT",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
   "devDependencies": {
     "serve": "^14.2.4"
   }

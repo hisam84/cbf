@@ -1,6 +1,181 @@
-// ==================== UTILITY FUNCTIONS ====================
+// ==============================================================================
+// Chavali Blood Foundation (চাঁভালি রক্ত ফাউন্ডেশন)
+// Frontend Client Layer with Neon PostgreSQL Backend Integration & Offline Cache
+// ==============================================================================
 
-// localStorage data management
+// ==================== API CLIENT LAYER ====================
+const API = {
+    baseUrl: '/api',
+
+    getToken() {
+        return localStorage.getItem('chavali_admin_token') || sessionStorage.getItem('chavali_admin_token');
+    },
+
+    setToken(token) {
+        if (token) {
+            localStorage.setItem('chavali_admin_token', token);
+        } else {
+            localStorage.removeItem('chavali_admin_token');
+        }
+    },
+
+    getAuthHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        const token = this.getToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
+    },
+
+    async request(endpoint, options = {}) {
+        try {
+            const url = `${this.baseUrl}${endpoint}`;
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    ...this.getAuthHeaders(),
+                    ...(options.headers || {})
+                }
+            });
+            const data = await res.json();
+            return { ok: res.ok, status: res.status, ...data };
+        } catch (err) {
+            console.warn(`API request to ${endpoint} failed (using offline fallback):`, err.message);
+            return { ok: false, offline: true, error: err.message };
+        }
+    },
+
+    // Health & DB status
+    async checkHealth() {
+        return await this.request('/health');
+    },
+
+    // Stats
+    async getStats() {
+        return await this.request('/stats');
+    },
+
+    // Donors
+    async getDonors(bloodGroup = 'all') {
+        const query = bloodGroup && bloodGroup !== 'all' ? `?bloodGroup=${encodeURIComponent(bloodGroup)}` : '';
+        return await this.request(`/donors${query}`);
+    },
+
+    async createDonor(donorData) {
+        return await this.request('/donors', {
+            method: 'POST',
+            body: JSON.stringify(donorData)
+        });
+    },
+
+    async updateDonor(id, donorData) {
+        return await this.request(`/donors/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(donorData)
+        });
+    },
+
+    async deleteDonor(id) {
+        return await this.request(`/donors/${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // Donations
+    async getDonations() {
+        return await this.request('/donations');
+    },
+
+    async createDonation(donationData) {
+        return await this.request('/donations', {
+            method: 'POST',
+            body: JSON.stringify(donationData)
+        });
+    },
+
+    async updateDonation(id, donationData) {
+        return await this.request(`/donations/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(donationData)
+        });
+    },
+
+    async deleteDonation(id) {
+        return await this.request(`/donations/${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // Gallery
+    async getGallery() {
+        return await this.request('/gallery');
+    },
+
+    async addGallery(imageData) {
+        return await this.request('/gallery', {
+            method: 'POST',
+            body: JSON.stringify(imageData)
+        });
+    },
+
+    async deleteGallery(id) {
+        return await this.request(`/gallery/${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // Certificates
+    async getCertificates() {
+        return await this.request('/certificates');
+    },
+
+    async getCertificate(id) {
+        return await this.request(`/certificates/${id}`);
+    },
+
+    async createCertificate(certificateData) {
+        return await this.request('/certificates', {
+            method: 'POST',
+            body: JSON.stringify(certificateData)
+        });
+    },
+
+    async deleteCertificate(id) {
+        return await this.request(`/certificates/${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // Auth
+    async login(username, password) {
+        return await this.request('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+    },
+
+    async verifyAuth() {
+        return await this.request('/auth/verify');
+    },
+
+    async changePassword(currentPassword, newPassword) {
+        return await this.request('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+    },
+
+    // Contact
+    async submitContact(formData) {
+        return await this.request('/contact', {
+            method: 'POST',
+            body: JSON.stringify(formData)
+        });
+    }
+};
+
+// ==================== LOCAL CACHE & SYNC HELPERS ====================
 function getDonors() {
     return JSON.parse(localStorage.getItem('chavali_donors') || '[]');
 }
@@ -9,15 +184,62 @@ function saveDonors(donors) {
     localStorage.setItem('chavali_donors', JSON.stringify(donors));
 }
 
+function getDonations() {
+    return JSON.parse(localStorage.getItem('chavali_donations') || '[]');
+}
+
+function saveDonations(donations) {
+    localStorage.setItem('chavali_donations', JSON.stringify(donations));
+}
+
+function getGalleryImages() {
+    return JSON.parse(localStorage.getItem('chavali_gallery') || '[]');
+}
+
+function saveGalleryImages(images) {
+    localStorage.setItem('chavali_gallery', JSON.stringify(images));
+}
+
+function getDonorPhotos() {
+    return JSON.parse(localStorage.getItem('chavali_donor_photos') || '[]');
+}
+
+function saveDonorPhotos(photos) {
+    localStorage.setItem('chavali_donor_photos', JSON.stringify(photos));
+}
+
+function getCertificates() {
+    try {
+        const data = localStorage.getItem('chavali_certificates');
+        return data ? JSON.parse(data) : [];
+    } catch (err) {
+        return [];
+    }
+}
+
+function saveCertificates(certificates) {
+    try {
+        localStorage.setItem('chavali_certificates', JSON.stringify(certificates));
+    } catch (err) {
+        console.warn('Storage full or unavailable');
+    }
+}
+
+function saveCertificate(certificate) {
+    const certificates = getCertificates();
+    certificates.push(certificate);
+    saveCertificates(certificates);
+}
+
+// Bengali digit conversion
+function toBengali(num) {
+    const bengaliDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return String(num).replace(/[0-9]/g, d => bengaliDigits[d]);
+}
+
 function normalizePhone(phone) {
     let digits = String(phone || '').replace(/\D/g, '');
-    // Bangladesh common formats:
-    // - 01XXXXXXXXX (local)
-    // - 1XXXXXXXXX (missing leading 0)
-    // - +8801XXXXXXXXX / 8801XXXXXXXXX (international)
-    // - +88017XXXXXXXX / 88017XXXXXXXX (international without leading 0)
     if (digits.startsWith('880') && digits.length >= 13) {
-        // convert 8801xxxxxxxxx or 88017xxxxxxxx -> 01xxxxxxxxx
         digits = '0' + digits.slice(3);
     }
     if (digits.startsWith('1') && digits.length === 10) {
@@ -57,36 +279,6 @@ function upsertDonorFromDonation({ donorName, donorPhone, donorAddress, bloodGro
     saveDonors(donors);
 }
 
-function getGalleryImages() {
-    return JSON.parse(localStorage.getItem('chavali_gallery') || '[]');
-}
-
-function saveGalleryImages(images) {
-    localStorage.setItem('chavali_gallery', JSON.stringify(images));
-}
-
-function getDonorPhotos() {
-    return JSON.parse(localStorage.getItem('chavali_donor_photos') || '[]');
-}
-
-function saveDonorPhotos(photos) {
-    localStorage.setItem('chavali_donor_photos', JSON.stringify(photos));
-}
-
-function getDonations() {
-    return JSON.parse(localStorage.getItem('chavali_donations') || '[]');
-}
-
-function saveDonations(donations) {
-    localStorage.setItem('chavali_donations', JSON.stringify(donations));
-}
-
-// Bengali digit conversion
-function toBengali(num) {
-    const bengaliDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
-    return String(num).replace(/[0-9]/g, d => bengaliDigits[d]);
-}
-
 // ==================== HEADER & NAVIGATION ====================
 const header = document.getElementById('header');
 const hamburger = document.getElementById('hamburger');
@@ -96,7 +288,6 @@ const scrollTopBtn = document.getElementById('scrollTopBtn');
 
 // Change header style while scrolling
 window.addEventListener('scroll', debounce(() => {
-    // Header shadow
     if (window.scrollY > 50) {
         if (header) header.classList.add('scrolled');
         if (scrollTopBtn) scrollTopBtn.classList.add('visible');
@@ -125,19 +316,16 @@ function closeMenu() {
     if (mobileOverlay) mobileOverlay.classList.remove('active');
 }
 
-// Close menu on nav link click
 document.querySelectorAll('.nav a').forEach(link => {
     link.addEventListener('click', closeMenu);
 });
 
-// Scroll to top
 if (scrollTopBtn) {
     scrollTopBtn.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 
-// Debounce function
 function debounce(func, delay) {
     let timeoutId;
     return function(...args) {
@@ -146,13 +334,20 @@ function debounce(func, delay) {
     };
 }
 
-// ==================== DONOR FORM SUBMISSION ====================
+// ==================== DONOR FORM SUBMISSION (REGISTER.HTML) ====================
 const donorForm = document.getElementById('donorForm');
 const successMsg = document.getElementById('successMsg');
 
 if (donorForm) {
-    donorForm.addEventListener('submit', (e) => {
+    donorForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        const submitBtn = donorForm.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'তথ্য সংরক্ষণ করা হচ্ছে...';
+        }
 
         const donor = {
             id: Date.now(),
@@ -164,26 +359,52 @@ if (donorForm) {
             registeredAt: new Date().toISOString()
         };
 
+        // 1. Save to Neon database
+        const apiRes = await API.createDonor(donor);
+
+        // 2. Sync to local cache
         const donors = getDonors();
         donors.push(donor);
         saveDonors(donors);
 
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
+        }
+
         // Show success message
-        successMsg.classList.add('show');
+        if (successMsg) {
+            successMsg.classList.add('show');
+        }
         donorForm.reset();
 
-        // Update
+        // Update UI
         renderDonorList();
         updateStats();
 
-        // Hide after 5 seconds
         setTimeout(() => {
-            successMsg.classList.remove('show');
+            if (successMsg) successMsg.classList.remove('show');
         }, 5000);
     });
 }
 
-// ==================== DONOR LIST RENDERING ====================
+// ==================== CONTACT FORM SUBMISSION ====================
+const contactForm = document.getElementById('contactForm');
+if (contactForm) {
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('contactName')?.value;
+        const phone = document.getElementById('contactPhone')?.value;
+        const email = document.getElementById('contactEmail')?.value;
+        const message = document.getElementById('contactMessage')?.value;
+
+        const res = await API.submitContact({ name, phone, email, message });
+        alert(res.message || 'ধন্যবাদ! আপনার বার্তা সফলভাবে পাঠানো হয়েছে।');
+        contactForm.reset();
+    });
+}
+
+// ==================== DONOR LIST RENDERING (DONORS.HTML) ====================
 const donorGrid = document.getElementById('donorGrid');
 const donorFilters = document.getElementById('donorFilters');
 let currentFilter = 'all';
@@ -194,32 +415,37 @@ function getDonorProfileImage(donor) {
     const donations = getDonations();
     const phoneKey = normalizePhone(donor.mobile);
     
-    // Find all donations by this donor (matched by phone)
     const donorDonations = donations
         .filter(d => normalizePhone(d.donorPhone) === phoneKey && d.image)
-        .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt)); // Most recent first
+        .sort((a, b) => new Date(b.addedAt || b.date) - new Date(a.addedAt || a.date));
     
     return donorDonations.length > 0 ? donorDonations[0].image : null;
 }
 
-function renderDonorList(filter = 'all') {
-    if (!donorGrid) return; // Exit if donorGrid doesn't exist on this page
+async function renderDonorList(filter = 'all') {
+    if (!donorGrid) return;
     
-    const donors = getDonors();
-    let filtered = filter === 'all' ? donors : donors.filter(d => d.bloodGroup === filter);
+    // Fetch live from Neon backend, fallback to local cache
+    let donors = getDonors();
+    const res = await API.getDonors(filter);
+    if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        donors = res.data;
+        saveDonors(donors); // update cache
+    }
     
-    // Sort by last donation date (most recent first)
+    let filtered = filter === 'all' ? donors : donors.filter(d => (d.bloodGroup || d.blood_group) === filter);
+    
     filtered = filtered.sort((a, b) => {
-        const dateA = a.lastDonation ? new Date(a.lastDonation) : new Date(0);
-        const dateB = b.lastDonation ? new Date(b.lastDonation) : new Date(0);
-        return dateB - dateA; // Most recent first
+        const dateA = (a.lastDonation || a.last_donation) ? new Date(a.lastDonation || a.last_donation) : new Date(0);
+        const dateB = (b.lastDonation || b.last_donation) ? new Date(b.lastDonation || b.last_donation) : new Date(0);
+        return dateB - dateA;
     });
 
     if (filtered.length === 0) {
         donorGrid.innerHTML = `
-            <div class="no-donors" style="grid-column:1/-1;">
-                <div class="icon"></div>
-                <p>${filter === 'all' ? 'No donors registered yet' : 'No donors found for ' + filter + ' blood group'}</p>
+            <div class="no-donors" style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">
+                <div class="icon" style="font-size:3rem; margin-bottom:12px;">🩸</div>
+                <p>${filter === 'all' ? 'এখনও কোন রক্তদাতা নিবন্ধিত হয়নি।' : filter + ' গ্রুপের কোন রক্তদাতা পাওয়া যায়নি।'}</p>
             </div>
         `;
         return;
@@ -227,6 +453,8 @@ function renderDonorList(filter = 'all') {
 
     donorGrid.innerHTML = filtered.map(donor => {
         const profileImage = getDonorProfileImage(donor);
+        const blood = donor.bloodGroup || donor.blood_group;
+        const lastDon = donor.lastDonation || donor.last_donation;
         
         return `
         <div class="donor-card">
@@ -234,12 +462,12 @@ function renderDonorList(filter = 'all') {
                 <div class="donor-avatar">
                     ${profileImage ? 
                         `<img src="${profileImage}" alt="${donor.name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : 
-                        ''
+                        '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#fee2e2; color:#dc2626; font-size:1.4rem; font-weight:700; border-radius:50%;">' + (donor.name ? donor.name.charAt(0) : 'CBF') + '</div>'
                     }
                 </div>
                 <div>
                     <div class="donor-name">${donor.name}</div>
-                    <span class="donor-blood">${donor.bloodGroup}</span>
+                    <span class="donor-blood">${blood}</span>
                 </div>
             </div>
             <div class="donor-info">
@@ -249,12 +477,12 @@ function renderDonorList(filter = 'all') {
                 </div>
                 <div class="donor-info-item">
                     <span class="icon">📞</span>
-                    <span>${donor.mobile}</span>
+                    <a href="tel:${donor.mobile}" style="color:inherit; text-decoration:none;">${donor.mobile}</a>
                 </div>
-                ${donor.lastDonation ? `
+                ${lastDon ? `
                 <div class="donor-info-item">
                     <span class="icon">🩸</span>
-                    <span>Last Donation: ${donor.lastDonation}</span>
+                    <span>শেষ রক্তদান: ${lastDon}</span>
                 </div>
                 ` : ''}
             </div>
@@ -262,7 +490,6 @@ function renderDonorList(filter = 'all') {
     `;}).join('');
 }
 
-// Filter buttons
 if (donorFilters) {
     donorFilters.addEventListener('click', (e) => {
         if (e.target.classList.contains('filter-btn')) {
@@ -274,203 +501,79 @@ if (donorFilters) {
     });
 }
 
-// ==================== DONATION SLIDER ====================
+// ==================== DONATION SLIDER (INDEX.HTML) ====================
 let currentSlide = 0;
 let donationSlides = [];
 let donationSliderIntervalId = null;
-let lastSliderPresetIndex = -1;
 
-const sliderTransitionPresets = [
-    // Smooth default
-    {
-        sliderDuration: '0.9s',
-        sliderEase: 'cubic-bezier(0.22, 1, 0.36, 1)',
-        activeZoom: '1.04',
-        activeFilter: 'none',
-        activeDuration: '1.2s',
-        activeEase: 'cubic-bezier(0.22, 1, 0.36, 1)',
-        contentOffset: '10px',
-        contentDuration: '0.9s',
-        contentEase: 'ease'
-    },
-    // Snappy slide
-    {
-        sliderDuration: '0.55s',
-        sliderEase: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-        activeZoom: '1.02',
-        activeFilter: 'none',
-        activeDuration: '0.7s',
-        activeEase: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-        contentOffset: '14px',
-        contentDuration: '0.6s',
-        contentEase: 'cubic-bezier(0.34, 1.56, 0.64, 1)'
-    },
-    // Cinematic slow
-    {
-        sliderDuration: '1.2s',
-        sliderEase: 'cubic-bezier(0.16, 1, 0.3, 1)',
-        activeZoom: '1.06',
-        activeFilter: 'contrast(1.05) saturate(1.05)',
-        activeDuration: '1.6s',
-        activeEase: 'cubic-bezier(0.16, 1, 0.3, 1)',
-        contentOffset: '8px',
-        contentDuration: '1.1s',
-        contentEase: 'cubic-bezier(0.16, 1, 0.3, 1)'
-    },
-    // Gentle fade feel
-    {
-        sliderDuration: '0.85s',
-        sliderEase: 'ease-in-out',
-        activeZoom: '1.03',
-        activeFilter: 'brightness(1.03) saturate(1.06)',
-        activeDuration: '1.0s',
-        activeEase: 'ease-in-out',
-        contentOffset: '16px',
-        contentDuration: '0.8s',
-        contentEase: 'ease-in-out'
+async function renderDonationSlider() {
+    const sliderContainer = document.getElementById('donationSlider');
+    if (!sliderContainer) return;
+
+    let donations = getDonations();
+    const res = await API.getDonations();
+    if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        donations = res.data;
+        saveDonations(donations);
     }
-];
 
-function applySliderTransitionPreset() {
-    const sliderTrack = document.getElementById('donationSlider');
-    if (!sliderTrack) return;
-
-    if (sliderTransitionPresets.length === 0) return;
-
-    let idx = Math.floor(Math.random() * sliderTransitionPresets.length);
-    if (sliderTransitionPresets.length > 1 && idx === lastSliderPresetIndex) {
-        idx = (idx + 1) % sliderTransitionPresets.length;
-    }
-    lastSliderPresetIndex = idx;
-
-    const preset = sliderTransitionPresets[idx];
-    sliderTrack.style.setProperty('--slider-duration', preset.sliderDuration);
-    sliderTrack.style.setProperty('--slider-ease', preset.sliderEase);
-    sliderTrack.style.setProperty('--active-zoom', preset.activeZoom);
-    sliderTrack.style.setProperty('--active-filter', preset.activeFilter);
-    sliderTrack.style.setProperty('--active-duration', preset.activeDuration);
-    sliderTrack.style.setProperty('--active-ease', preset.activeEase);
-    sliderTrack.style.setProperty('--content-offset', preset.contentOffset);
-    sliderTrack.style.setProperty('--content-duration', preset.contentDuration);
-    sliderTrack.style.setProperty('--content-ease', preset.contentEase);
-}
-
-function renderDonationSlider() {
-    const sliderTrack = document.getElementById('donationSlider');
-    const indicatorsEl = document.getElementById('donationSliderIndicators');
-    if (!sliderTrack) return; // Exit if not on homepage
-    
-    const donations = getDonations();
-    
-    // Filter donations with images and sort by most recent
-    const donationsWithImages = donations
-        .filter(d => d.image)
-        .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt))
-        .slice(0, 10); // Show latest 10 donations
-    
-    if (donationsWithImages.length === 0) {
-        sliderTrack.innerHTML = `
-            <div class="donation-slide">
-                <img src="https://via.placeholder.com/1000x400/DC2626/FFFFFF?text=No+Donations+Yet" alt="No donations">
-                <div class="donation-slide-content">
-                    <div class="donation-slide-title">কোনো রক্তদান নেই</div>
-                    <div class="donation-slide-subtitle">এখনো কোনো রক্তদানের ছবি পাওয়া যাচ্ছেনি</div>
-                    <div class="donation-slide-date">অনুগ্রহ করুন</div>
-                </div>
+    if (donations.length === 0) {
+        sliderContainer.innerHTML = `
+            <div style="padding:40px; text-align:center; color:#666; width:100%;">
+                <p>কোন সাম্প্রতিক রক্তদানের রেকর্ড পাওয়া যায়নি</p>
             </div>
         `;
-        if (indicatorsEl) indicatorsEl.innerHTML = '';
-        currentSlide = 0;
-        if (donationSliderIntervalId) {
-            clearInterval(donationSliderIntervalId);
-            donationSliderIntervalId = null;
-        }
         return;
     }
-    
-    donationSlides = donationsWithImages;
-    if (currentSlide >= donationSlides.length) currentSlide = 0;
-    
-    sliderTrack.innerHTML = donationsWithImages.map((donation) => `
-        <div class="donation-slide">
-            <img src="${donation.image}" alt="${donation.donorName || 'Donor'}">
-            <div class="donation-slide-content">
-                <div class="donation-slide-title">${donation.donorName || 'Anonymous Donor'}</div>
-                <div class="donation-slide-subtitle">Donation Number: ${donation.number}</div>
-                <div class="donation-slide-date">${new Date(donation.addedAt).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+
+    donationSlides = donations;
+    sliderContainer.innerHTML = donations.map((d, index) => `
+        <div class="donation-slide ${index === 0 ? 'is-active' : ''}" style="min-width:100%; flex-shrink:0; padding:20px; box-sizing:border-box;">
+            <div class="donation-slide-card" style="background:#fff; border-radius:12px; padding:24px; box-shadow:0 4px 15px rgba(0,0,0,0.06); display:flex; flex-wrap:wrap; gap:20px; align-items:center;">
+                ${d.image ? `
+                    <div style="width:120px; height:120px; border-radius:10px; overflow:hidden; flex-shrink:0;">
+                        <img src="${d.image}" alt="${d.donorName}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                ` : ''}
+                <div style="flex:1; min-width:200px;">
+                    <span style="display:inline-block; padding:4px 12px; background:#fee2e2; color:#dc2626; border-radius:20px; font-weight:700; font-size:0.9rem; margin-bottom:8px;">${d.bloodGroup}</span>
+                    <h3 style="margin:0 0 6px 0; font-size:1.3rem; color:#1f2937;">${d.donorName}</h3>
+                    <p style="margin:0 0 4px 0; color:#4b5563; font-size:0.95rem;">📍 ${d.donorAddress}</p>
+                    <p style="margin:0 0 4px 0; color:#6b7280; font-size:0.9rem;">🗓️ তারিখ: ${d.date}</p>
+                    <p style="margin:0; color:#9ca3af; font-size:0.85rem;">আইডি: ${d.number}</p>
+                </div>
             </div>
         </div>
     `).join('');
 
+    const indicatorsEl = document.getElementById('donationSliderIndicators');
     if (indicatorsEl) {
-        indicatorsEl.innerHTML = donationsWithImages.map((_, index) =>
-            `<div class="slider-indicator ${index === currentSlide ? 'active' : ''}" data-index="${index}"></div>`
-        ).join('');
-
-        indicatorsEl.querySelectorAll('.slider-indicator').forEach((dot) => {
-            dot.onclick = () => {
-                const idx = Number(dot.getAttribute('data-index'));
-                if (Number.isFinite(idx)) {
-                    currentSlide = idx;
-                    updateSlider();
-                }
-            };
-        });
+        indicatorsEl.innerHTML = donations.map((_, i) => `
+            <button class="slider-indicator ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})" aria-label="Slide ${i+1}"></button>
+        `).join('');
     }
 
-    setupSliderControls();
+    startSliderAutoPlay();
+}
+
+window.goToSlide = function(index) {
+    currentSlide = index;
     updateSlider();
-}
-
-function setupSliderControls() {
-    const prevBtn = document.getElementById('prevSlide');
-    const nextBtn = document.getElementById('nextSlide');
-    
-    if (prevBtn) {
-        prevBtn.onclick = () => {
-            currentSlide = currentSlide > 0 ? currentSlide - 1 : donationSlides.length - 1;
-            updateSlider();
-        };
-    }
-    
-    if (nextBtn) {
-        nextBtn.onclick = () => {
-            currentSlide = currentSlide < donationSlides.length - 1 ? currentSlide + 1 : 0;
-            updateSlider();
-        };
-    }
-    
-    // Auto-play slider
-    if (donationSliderIntervalId) {
-        clearInterval(donationSliderIntervalId);
-        donationSliderIntervalId = null;
-    }
-
-    donationSliderIntervalId = setInterval(() => {
-        if (donationSlides.length > 1) {
-            currentSlide = currentSlide < donationSlides.length - 1 ? currentSlide + 1 : 0;
-            updateSlider();
-        }
-    }, 6000); // Change slide every 6 seconds
-}
+};
 
 function updateSlider() {
     const sliderTrack = document.getElementById('donationSlider');
-    if (!sliderTrack) return;
+    if (!sliderTrack || donationSlides.length === 0) return;
 
-    applySliderTransitionPreset();
-    
-    const slideWidth = 100; // Each slide takes 100% width
-    const offset = -currentSlide * slideWidth;
-    
+    const offset = -currentSlide * 100;
     sliderTrack.style.transform = `translateX(${offset}%)`;
+    sliderTrack.style.transition = 'transform 0.5s ease-in-out';
 
     const slides = sliderTrack.querySelectorAll('.donation-slide');
     slides.forEach((slide, index) => {
         slide.classList.toggle('is-active', index === currentSlide);
     });
-    
-    // Update indicators
+
     const indicatorsEl = document.getElementById('donationSliderIndicators');
     if (indicatorsEl) {
         const indicators = indicatorsEl.querySelectorAll('.slider-indicator');
@@ -480,50 +583,68 @@ function updateSlider() {
     }
 }
 
-// ==================== GALLERY RENDERING ====================
+function startSliderAutoPlay() {
+    if (donationSliderIntervalId) clearInterval(donationSliderIntervalId);
+    if (donationSlides.length > 1) {
+        donationSliderIntervalId = setInterval(() => {
+            currentSlide = (currentSlide + 1) % donationSlides.length;
+            updateSlider();
+        }, 5000);
+    }
+}
+
+const prevSlideBtn = document.getElementById('prevSlide');
+const nextSlideBtn = document.getElementById('nextSlide');
+
+if (prevSlideBtn) {
+    prevSlideBtn.addEventListener('click', () => {
+        if (donationSlides.length > 0) {
+            currentSlide = (currentSlide - 1 + donationSlides.length) % donationSlides.length;
+            updateSlider();
+        }
+    });
+}
+
+if (nextSlideBtn) {
+    nextSlideBtn.addEventListener('click', () => {
+        if (donationSlides.length > 0) {
+            currentSlide = (currentSlide + 1) % donationSlides.length;
+            updateSlider();
+        }
+    });
+}
+
+// ==================== GALLERY RENDERING (GALLERY.HTML) ====================
 const galleryGrid = document.getElementById('galleryGrid');
 
-function renderGallery() {
-    if (!galleryGrid) return; // Exit if galleryGrid doesn't exist on this page
+async function renderGallery() {
+    if (!galleryGrid) return;
     
-    const gallery = getGalleryImages();
+    let gallery = getGalleryImages();
     const donorPhotos = getDonorPhotos();
+    
+    const res = await API.getGallery();
+    if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        gallery = res.data;
+        saveGalleryImages(gallery);
+    }
+
     const allImages = [...gallery, ...donorPhotos];
 
     if (allImages.length === 0) {
         galleryGrid.innerHTML = `
-            <div class="gallery-card">
-                <div class="gallery-placeholder"></div>
-                <div class="caption">Blood Donation Camp 2024</div>
-            </div>
-            <div class="gallery-card">
-                <div class="gallery-placeholder"></div>
-                <div class="caption">Volunteer Blood Donors</div>
-            </div>
-            <div class="gallery-card">
-                <div class="gallery-placeholder"></div>
-                <div class="caption">Awareness Program</div>
-            </div>
-            <div class="gallery-card">
-                <div class="gallery-placeholder"></div>
-                <div class="caption">Blood Donation Service</div>
-            </div>
-            <div class="gallery-card">
-                <div class="gallery-placeholder"></div>
-                <div class="caption">Hospital Support</div>
-            </div>
-            <div class="gallery-card">
-                <div class="gallery-placeholder"></div>
-                <div class="caption">Emergency Blood Donation</div>
-            </div>
+            <div class="gallery-card"><div class="gallery-placeholder"></div><div class="caption">রক্তদান কর্মসূচি ২০২৬</div></div>
+            <div class="gallery-card"><div class="gallery-placeholder"></div><div class="caption">স্বেচ্ছাসেবী রক্তদাতা সমাবেশ</div></div>
+            <div class="gallery-card"><div class="gallery-placeholder"></div><div class="caption">সচেতনতামূলক কার্যক্রম</div></div>
+            <div class="gallery-card"><div class="gallery-placeholder"></div><div class="caption">জরুরি রক্ত সহায়তা</div></div>
         `;
         return;
     }
 
-    galleryGrid.innerHTML = allImages.map((img, i) => `
-        <div class="gallery-card" onclick="openLightbox('${img.data}')">
-            <img src="${img.data}" alt="${img.caption || 'Blood Donation Activity'}" loading="lazy">
-            <div class="caption">${img.caption || 'Blood Donation Activity'}</div>
+    galleryGrid.innerHTML = allImages.map((img) => `
+        <div class="gallery-card" onclick="openLightbox('${img.data || img.image_data || ''}')">
+            <img src="${img.data || img.image_data || ''}" alt="${img.caption || 'Blood Donation Activity'}" loading="lazy">
+            <div class="caption">${img.caption || 'রক্তদান কার্যক্রম'}</div>
         </div>
     `).join('');
 }
@@ -534,7 +655,7 @@ const lightboxImg = document.getElementById('lightboxImg');
 const lightboxClose = document.getElementById('lightboxClose');
 
 window.openLightbox = function(src) {
-    if (!lightbox || !lightboxImg) return;
+    if (!lightbox || !lightboxImg || !src) return;
     lightboxImg.src = src;
     lightbox.classList.add('active');
 };
@@ -547,47 +668,42 @@ if (lightboxClose) {
 
 if (lightbox) {
     lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) {
-            lightbox.classList.remove('active');
-        }
+        if (e.target === lightbox) lightbox.classList.remove('active');
     });
 }
 
-// ==================== STATS ====================
-function updateStats() {
-    const count = getDonors().length;
-    const statDonors = document.getElementById('statDonors');
-    if (statDonors) statDonors.textContent = count;
-    const adminStat = document.getElementById('adminStatDonors');
-    if (adminStat) adminStat.textContent = count;
-    
-    const donationCount = getDonations().length;
-    const adminDonationStat = document.getElementById('adminStatDonations');
-    if (adminDonationStat) adminDonationStat.textContent = donationCount;
-    
-    const certificateCount = getCertificates().length;
-    const adminCertificateStat = document.getElementById('adminStatCertificates');
-    if (adminCertificateStat) adminCertificateStat.textContent = certificateCount;
-}
+// ==================== STATS COUNTER ====================
+async function updateStats() {
+    let donorsCount = getDonors().length;
+    let donationsCount = getDonations().length;
+    let certificatesCount = getCertificates().length;
 
-// ==================== ADMIN LOGIN SYSTEM ====================
-// Initialize default credentials if not already set
-function initializeAdminCredentials() {
-    if (!localStorage.getItem('chavali_admin_username') || !localStorage.getItem('chavali_admin_password')) {
-        localStorage.setItem('chavali_admin_username', 'admin');
-        localStorage.setItem('chavali_admin_password', 'admin123');
+    // Fetch live stats from Neon API
+    const res = await API.getStats();
+    if (res.ok && res.stats) {
+        donorsCount = res.stats.totalDonors || donorsCount;
+        donationsCount = res.stats.totalDonations || donationsCount;
+        certificatesCount = res.stats.totalCertificates || certificatesCount;
     }
+
+    const statDonors = document.getElementById('statDonors');
+    if (statDonors) statDonors.textContent = toBengali(donorsCount);
+
+    const adminStatDonors = document.getElementById('adminStatDonors');
+    if (adminStatDonors) adminStatDonors.textContent = donorsCount;
+
+    const adminDonationStat = document.getElementById('adminStatDonations');
+    if (adminDonationStat) adminDonationStat.textContent = donationsCount;
+
+    const adminCertificateStat = document.getElementById('adminStatCertificates');
+    if (adminCertificateStat) adminCertificateStat.textContent = certificatesCount;
 }
 
-// Initialize credentials immediately on script load
-initializeAdminCredentials();
-
-// Check if user is logged in
+// ==================== ADMIN SYSTEM & NEON DB STATUS ====================
 function isAdminLoggedIn() {
-    return localStorage.getItem('chavali_admin_logged_in') === 'true';
+    return Boolean(API.getToken() || localStorage.getItem('chavali_admin_logged_in') === 'true');
 }
 
-// Show login form and hide dashboard
 function showLoginForm() {
     const adminLogin = document.getElementById('adminLogin');
     const adminDashboard = document.getElementById('adminDashboard');
@@ -595,53 +711,77 @@ function showLoginForm() {
     if (adminDashboard) adminDashboard.style.display = 'none';
 }
 
-// Show dashboard and hide login form
 function showAdminDashboard() {
     const adminLogin = document.getElementById('adminLogin');
     const adminDashboard = document.getElementById('adminDashboard');
     if (adminLogin) adminLogin.style.display = 'none';
     if (adminDashboard) adminDashboard.style.display = 'block';
+    
+    // Check DB status on dashboard show
+    updateDbStatusBadge();
 }
 
-// Handle admin login form submission
+async function updateDbStatusBadge() {
+    const badge = document.getElementById('dbStatusPill');
+    const badgeText = document.getElementById('dbStatusText');
+    const statusDot = document.getElementById('dbStatusDot');
+    if (!badge || !badgeText) return;
+
+    const health = await API.checkHealth();
+    if (health.ok && health.database && health.database.connected) {
+        badge.style.background = '#f0fdf4';
+        badge.style.borderColor = '#bbf7d0';
+        badge.style.color = '#166534';
+        if (statusDot) statusDot.style.background = '#22c55e';
+        badgeText.textContent = `Neon DB: Connected (${health.database.latencyMs}ms)`;
+    } else if (health.database && health.database.configured) {
+        badge.style.background = '#fef2f2';
+        badge.style.borderColor = '#fecaca';
+        badge.style.color = '#991b1b';
+        if (statusDot) statusDot.style.background = '#ef4444';
+        badgeText.textContent = 'Neon DB: Connection Error';
+    } else {
+        badge.style.background = '#fffbeb';
+        badge.style.borderColor = '#fde68a';
+        badge.style.color = '#92400e';
+        if (statusDot) statusDot.style.background = '#f59e0b';
+        badgeText.textContent = 'Neon DB: Local Mode';
+    }
+}
+
+// Admin Login Form
 const adminLoginForm = document.getElementById('adminLoginForm');
 if (adminLoginForm) {
-    adminLoginForm.addEventListener('submit', (e) => {
+    adminLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const username = document.getElementById('adminUsername')?.value.trim();
         const password = document.getElementById('adminPassword')?.value.trim();
         const loginMessage = document.getElementById('loginMessage');
         
-        // Get stored credentials
-        const storedUsername = localStorage.getItem('chavali_admin_username');
-        const storedPassword = localStorage.getItem('chavali_admin_password');
-        
-        // Validate credentials
         if (!username || !password) {
             if (loginMessage) {
                 loginMessage.textContent = 'Please enter both username and password';
                 loginMessage.style.display = 'block';
                 loginMessage.style.background = '#fee2e2';
                 loginMessage.style.color = '#991b1b';
-                loginMessage.style.border = '1px solid #fca5a5';
             }
             return;
         }
-        
-        if (username === storedUsername && password === storedPassword) {
-            // Login successful
+
+        const res = await API.login(username, password);
+
+        if (res.ok && res.token) {
+            API.setToken(res.token);
             localStorage.setItem('chavali_admin_logged_in', 'true');
-            
+
             if (loginMessage) {
-                loginMessage.textContent = 'Login successful! Redirecting...';
+                loginMessage.textContent = 'Login successful! Opening dashboard...';
                 loginMessage.style.display = 'block';
                 loginMessage.style.background = '#dcfce7';
                 loginMessage.style.color = '#166534';
-                loginMessage.style.border = '1px solid #86efac';
             }
-            
-            // Show dashboard after short delay
+
             setTimeout(() => {
                 showAdminDashboard();
                 adminLoginForm.reset();
@@ -651,102 +791,58 @@ if (adminLoginForm) {
                 updateStats();
                 populateCertificateDonationSelect();
                 if (loginMessage) loginMessage.style.display = 'none';
-            }, 500);
+            }, 400);
         } else {
-            // Login failed
-            if (loginMessage) {
-                loginMessage.textContent = 'Invalid username or password';
-                loginMessage.style.display = 'block';
-                loginMessage.style.background = '#fee2e2';
-                loginMessage.style.color = '#991b1b';
-                loginMessage.style.border = '1px solid #fca5a5';
+            // Local fallback check
+            const storedUser = localStorage.getItem('chavali_admin_username') || 'admin';
+            const storedPass = localStorage.getItem('chavali_admin_password') || 'admin123';
+
+            if (username === storedUser && password === storedPass) {
+                localStorage.setItem('chavali_admin_logged_in', 'true');
+                showAdminDashboard();
+                renderAdminDonorTable();
+                renderAdminDonationTable();
+                renderAdminCertificateTable();
+                updateStats();
+                populateCertificateDonationSelect();
+            } else {
+                if (loginMessage) {
+                    loginMessage.textContent = res.message || 'Invalid username or password';
+                    loginMessage.style.display = 'block';
+                    loginMessage.style.background = '#fee2e2';
+                    loginMessage.style.color = '#991b1b';
+                }
             }
         }
     });
 }
 
-// ==================== PASSWORD TOGGLE ====================
+// Password toggle
 const passwordToggle = document.getElementById('passwordToggle');
 const passwordInput = document.getElementById('adminPassword');
-
 if (passwordToggle && passwordInput) {
     passwordToggle.addEventListener('click', (e) => {
         e.preventDefault();
-        
-        // Toggle password visibility
         const isPassword = passwordInput.type === 'password';
         passwordInput.type = isPassword ? 'text' : 'password';
-        
-        // Update toggle button appearance
         const eyeIcon = passwordToggle.querySelector('.eye-icon');
-        if (eyeIcon) {
-            eyeIcon.textContent = isPassword ? '🙈' : '👁️';
-        }
+        if (eyeIcon) eyeIcon.textContent = isPassword ? '🙈' : '👁️';
     });
 }
 
-// Toggle password visibility for change password form
-const passwordFields = [
-    { toggleId: 'currentPasswordToggle', inputId: 'currentPassword' },
-    { toggleId: 'newPasswordToggle', inputId: 'newPassword' },
-    { toggleId: 'confirmPasswordToggle', inputId: 'confirmPassword' }
-];
-
-passwordFields.forEach(field => {
-    const toggle = document.getElementById(field.toggleId);
-    const input = document.getElementById(field.inputId);
-    
-    if (toggle && input) {
-        toggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Toggle password visibility
-            const isPassword = input.type === 'password';
-            input.type = isPassword ? 'text' : 'password';
-            
-            // Update toggle button appearance
-            const eyeIcon = toggle.querySelector('.eye-icon');
-            if (eyeIcon) {
-                eyeIcon.textContent = isPassword ? '🙈' : '👁️';
-            }
-        });
-    }
-});
-
-// Initialize admin page on load
-window.addEventListener('load', () => {
-    const adminDashboard = document.getElementById('adminDashboard');
-    const adminLogin = document.getElementById('adminLogin');
-    
-    if (adminDashboard || adminLogin) {
-        // Check if user is logged in
-        if (isAdminLoggedIn()) {
-            showAdminDashboard();
-            renderAdminDonorTable();
-            renderAdminDonationTable();
-            renderAdminCertificateTable();
-            updateStats();
-            populateCertificateDonationSelect();
-        } else {
-            showLoginForm();
-        }
-    }
-});
-
-// ==================== ADMIN LOGOUT ====================
+// Admin Logout
 const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 if (adminLogoutBtn) {
     adminLogoutBtn.addEventListener('click', () => {
         if (confirm('Are you sure you want to logout?')) {
+            API.setToken(null);
             localStorage.removeItem('chavali_admin_logged_in');
-            
-            // Redirect to homepage
             window.location.href = '../index.html';
         }
     });
 }
 
-// ==================== ADMIN TABS ====================
+// Admin Tab Switching
 const adminTabs = document.querySelectorAll('.admin-tab');
 if (adminTabs.length > 0) {
     adminTabs.forEach(tab => {
@@ -754,17 +850,64 @@ if (adminTabs.length > 0) {
             document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
-            document.getElementById(tab.dataset.tab).classList.add('active');
+            const target = document.getElementById(tab.dataset.tab);
+            if (target) target.classList.add('active');
         });
     });
 }
 
-// ==================== ADMIN: DONATION LIST ====================
-function renderAdminDonationTable() {
+// ==================== ADMIN: DONOR TABLE ====================
+async function renderAdminDonorTable() {
+    const tbody = document.getElementById('adminDonorBody');
+    if (!tbody) return;
+
+    let donors = getDonors();
+    const res = await API.getDonors('all');
+    if (res.ok && Array.isArray(res.data)) {
+        donors = res.data;
+        saveDonors(donors);
+    }
+
+    if (donors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">No donors registered yet</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = donors.map((d, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${d.name}</td>
+            <td>${d.mobile}</td>
+            <td><span class="donor-blood">${d.bloodGroup || d.blood_group}</span></td>
+            <td>${d.address}</td>
+            <td>${d.lastDonation || d.last_donation || 'Not mentioned'}</td>
+            <td><button class="delete-btn" onclick="deleteDonor(${d.id})">Delete</button></td>
+        </tr>
+    `).join('');
+}
+
+window.deleteDonor = async function(id) {
+    if (confirm('Are you sure you want to delete this donor?')) {
+        await API.deleteDonor(id);
+        let donors = getDonors().filter(d => d.id !== id);
+        saveDonors(donors);
+        renderAdminDonorTable();
+        renderDonorList(currentFilter);
+        updateStats();
+    }
+};
+
+// ==================== ADMIN: DONATION TABLE ====================
+async function renderAdminDonationTable() {
     const tbody = document.getElementById('adminDonationBody');
-    if (!tbody) return; // Exit if not on admin page
-    
-    const donations = getDonations();
+    if (!tbody) return;
+
+    let donations = getDonations();
+    const res = await API.getDonations();
+    if (res.ok && Array.isArray(res.data)) {
+        donations = res.data;
+        saveDonations(donations);
+    }
 
     if (donations.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:#999;">No donation records found</td></tr>';
@@ -790,129 +933,60 @@ function renderAdminDonationTable() {
 window.editDonation = function(id) {
     const donations = getDonations();
     const donation = donations.find(d => d.id === id);
-    
     if (!donation) return;
-    
-    // Populate form with donation data
+
     document.getElementById('addDonorName').value = donation.donorName || '';
     document.getElementById('addDonorPhone').value = donation.donorPhone || '';
     document.getElementById('addDonorAddress').value = donation.donorAddress || '';
     document.getElementById('addDonationNumber').value = donation.number;
     document.getElementById('addDonationBlood').value = donation.bloodGroup;
     document.getElementById('addDonationDate').value = donation.date;
-    
-    // Show existing image if any
+
     if (donation.image) {
         const preview = document.getElementById('donationImagePreview');
-        preview.innerHTML = `
-            <div style="display:flex; align-items:center; gap:12px; padding:12px; background:#f0f0f0; border-radius:8px;">
-                <img src="${donation.image}" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
-                <div>
-                    <p style="margin:0; font-weight:500;">Current Image</p>
-                    <p style="margin:4px 0 0 0; font-size:0.85rem; color:#666;">New image will replace this one</p>
+        if (preview) {
+            preview.innerHTML = `
+                <div style="display:flex; align-items:center; gap:12px; padding:12px; background:#f0f0f0; border-radius:8px;">
+                    <img src="${donation.image}" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
+                    <div>
+                        <p style="margin:0; font-weight:500;">Current Image</p>
+                        <p style="margin:4px 0 0 0; font-size:0.85rem; color:#666;">Upload new image to replace</p>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
-    
-    // Store editing ID
+
     addDonationForm.editingId = id;
-    
-    // Change submit button text
     const submitBtn = addDonationForm.querySelector('button[type="submit"]');
-    submitBtn.textContent = 'Update Donation';
-    
-    // Show cancel button
+    if (submitBtn) submitBtn.textContent = 'Update Donation';
+
     const cancelBtn = document.getElementById('cancelDonationBtn');
-    if (cancelBtn) {
-        cancelBtn.style.display = 'inline-block';
-    }
-    
-    // Switch to donation tab
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
+
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
-    document.querySelector('[data-tab="adminAddDonation"]').classList.add('active');
-    document.getElementById('adminAddDonation').classList.add('active');
-    
-    // Scroll to form
-    document.getElementById('adminAddDonation').scrollIntoView({ behavior: 'smooth' });
+    const addTab = document.querySelector('[data-tab="adminAddDonation"]');
+    if (addTab) addTab.classList.add('active');
+    const addPanel = document.getElementById('adminAddDonation');
+    if (addPanel) addPanel.classList.add('active');
+
+    addPanel?.scrollIntoView({ behavior: 'smooth' });
 };
 
-window.deleteDonation = function(id) {
+window.deleteDonation = async function(id) {
     if (confirm('Are you sure you want to delete this donation record?')) {
-        let donations = getDonations();
-        donations = donations.filter(d => d.id !== id);
+        await API.deleteDonation(id);
+        let donations = getDonations().filter(d => d.id !== id);
         saveDonations(donations);
         renderAdminDonationTable();
         updateStats();
     }
 };
 
-// ==================== ADMIN: DONOR TABLE ====================
-function renderAdminDonorTable() {
-    const tbody = document.getElementById('adminDonorBody');
-    if (!tbody) return; // Exit if not on admin page
-    
-    const donors = getDonors();
-
-    if (donors.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">No donors registered</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = donors.map((d, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td>${d.name}</td>
-            <td>${d.mobile}</td>
-            <td><span class="donor-blood">${d.bloodGroup}</span></td>
-            <td>${d.address}</td>
-            <td>${d.lastDonation || 'Not mentioned'}</td>
-            <td><button class="delete-btn" onclick="deleteDonor(${d.id})">Delete</button></td>
-        </tr>
-    `).join('');
-}
-
-window.deleteDonor = function(id) {
-    if (confirm('Are you sure you want to delete this donor?')) {
-        let donors = getDonors();
-        donors = donors.filter(d => d.id !== id);
-        saveDonors(donors);
-        renderAdminDonorTable();
-        renderDonorList(currentFilter);
-        updateStats();
-    }
-};
-
-// ==================== ADMIN: ADD DONOR FORM ====================
-// ==================== CERTIFICATE STORAGE ====================
-function getCertificates() {
-    try {
-        const data = localStorage.getItem('chavali_certificates');
-        return data ? JSON.parse(data) : [];
-    } catch (err) {
-        return [];
-    }
-}
-
-function saveCertificates(certificates) {
-    try {
-        localStorage.setItem('chavali_certificates', JSON.stringify(certificates));
-    } catch (err) {
-        throw new Error('Storage full or unavailable');
-    }
-}
-
-function saveCertificate(certificate) {
-    const certificates = getCertificates();
-    certificates.push(certificate);
-    saveCertificates(certificates);
-}
-
-// ==================== ADMIN: ADD DONATION ====================
+// ==================== ADMIN: ADD / EDIT DONATION FORM ====================
 const addDonationForm = document.getElementById('adminAddDonationForm');
 const donationImageInput = document.getElementById('donationImageInput');
-
 const addDonorPhoneInput = document.getElementById('addDonorPhone');
 const donorPhoneList = document.getElementById('donorPhoneList');
 
@@ -943,7 +1017,7 @@ function fillDonationFormFromPhone(phone) {
 
     if (nameEl && !nameEl.value) nameEl.value = match.name || '';
     if (addressEl && !addressEl.value) addressEl.value = match.address || '';
-    if (bloodEl && !bloodEl.value) bloodEl.value = match.bloodGroup || '';
+    if (bloodEl && !bloodEl.value) bloodEl.value = match.bloodGroup || match.blood_group || '';
 }
 
 if (addDonorPhoneInput) {
@@ -953,34 +1027,11 @@ if (addDonorPhoneInput) {
         renderDonorPhoneSuggestions();
         fillDonationFormFromPhone(e.target.value);
     });
-    addDonorPhoneInput.addEventListener('change', (e) => {
-        fillDonationFormFromPhone(e.target.value);
-    });
 }
-const donationImageUploadArea = document.getElementById('donationImageUploadArea');
 
+const donationImageUploadArea = document.getElementById('donationImageUploadArea');
 if (donationImageUploadArea) {
     donationImageUploadArea.addEventListener('click', () => donationImageInput?.click());
-    
-    donationImageUploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        donationImageUploadArea.style.borderColor = 'var(--primary)';
-        donationImageUploadArea.style.background = 'var(--primary-light)';
-    });
-    
-    donationImageUploadArea.addEventListener('dragleave', () => {
-        donationImageUploadArea.style.borderColor = '#ddd';
-        donationImageUploadArea.style.background = '#f9f9f9';
-    });
-    
-    donationImageUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        donationImageUploadArea.style.borderColor = '#ddd';
-        donationImageUploadArea.style.background = '#f9f9f9';
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleDonationImageFile(e.dataTransfer.files[0]);
-        }
-    });
 }
 
 if (donationImageInput) {
@@ -992,11 +1043,10 @@ if (donationImageInput) {
 }
 
 function handleDonationImageFile(file) {
-    if (file.size > 2 * 1024 * 1024) {
-        showAddDonationMessage('File size must be less than 2MB!', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+        showAddDonationMessage('File size must be less than 5MB!', 'error');
         return;
     }
-    
     const reader = new FileReader();
     reader.onload = (e) => {
         const preview = document.getElementById('donationImagePreview');
@@ -1011,21 +1061,21 @@ function handleDonationImageFile(file) {
                     </div>
                 </div>
             `;
-            addDonationForm.donationImage = e.target.result; // Store base64 in form object
+            if (addDonationForm) addDonationForm.donationImage = e.target.result;
         }
     };
     reader.readAsDataURL(file);
 }
 
-function clearDonationImage() {
+window.clearDonationImage = function() {
     if (donationImageInput) donationImageInput.value = '';
     const preview = document.getElementById('donationImagePreview');
     if (preview) preview.innerHTML = '';
     if (addDonationForm) addDonationForm.donationImage = null;
-}
+};
 
 if (addDonationForm) {
-    addDonationForm.addEventListener('submit', (e) => {
+    addDonationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const donorName = document.getElementById('addDonorName')?.value.trim();
@@ -1042,87 +1092,68 @@ if (addDonationForm) {
         }
         
         const isEditing = addDonationForm.editingId;
-        let donations = getDonations();
-        
+        const donationPayload = {
+            donorName,
+            donorPhone,
+            donorAddress,
+            number: donationNumber,
+            bloodGroup,
+            date: donationDate,
+            image: donationImage
+        };
+
         if (isEditing) {
-            // Update existing donation
-            const index = donations.findIndex(d => d.id === isEditing);
-            if (index !== -1) {
-                donations[index] = {
-                    ...donations[index],
-                    donorName: donorName,
-                    donorPhone: donorPhone,
-                    donorAddress: donorAddress,
-                    number: donationNumber,
-                    bloodGroup: bloodGroup,
-                    date: donationDate,
-                    image: donationImage || donations[index].image,
-                    updatedAt: new Date().toISOString()
-                };
-                showAddDonationMessage('Donation updated successfully!', 'success');
+            await API.updateDonation(isEditing, donationPayload);
+            let donations = getDonations();
+            const idx = donations.findIndex(d => d.id === isEditing);
+            if (idx !== -1) {
+                donations[idx] = { ...donations[idx], ...donationPayload, updatedAt: new Date().toISOString() };
+                saveDonations(donations);
             }
+            showAddDonationMessage('Donation updated successfully!', 'success');
         } else {
-            // Add new donation
-            const newDonation = {
-                id: Date.now(),
-                donorName: donorName,
-                donorPhone: donorPhone,
-                donorAddress: donorAddress,
-                number: donationNumber,
-                bloodGroup: bloodGroup,
-                date: donationDate,
-                image: donationImage,
+            const apiRes = await API.createDonation(donationPayload);
+            let donations = getDonations();
+            const newRecord = {
+                id: apiRes.data?.id || Date.now(),
+                ...donationPayload,
                 addedAt: new Date().toISOString()
             };
-            donations.push(newDonation);
-            showAddDonationMessage('Donation added successfully!', 'success');
-        }
-        
-        try {
+            donations.push(newRecord);
             saveDonations(donations);
-
-            upsertDonorFromDonation({
-                donorName,
-                donorPhone,
-                donorAddress,
-                bloodGroup,
-                donationDate
-            });
-
-            resetDonationForm();
-            renderAdminDonationTable();
-            renderAdminDonorTable();
-            updateStats();
-            renderDonationSlider(); // Update slider with new donation
-            renderDonorPhoneSuggestions();
-            
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                showAddDonationMessage('', '');
-            }, 3000);
-        } catch (err) {
-            showAddDonationMessage('Error saving donation. Storage may be full.', 'error');
+            showAddDonationMessage('Donation recorded successfully in Neon DB!', 'success');
         }
+
+        upsertDonorFromDonation({
+            donorName,
+            donorPhone,
+            donorAddress,
+            bloodGroup,
+            donationDate
+        });
+
+        resetDonationForm();
+        renderAdminDonationTable();
+        renderAdminDonorTable();
+        updateStats();
+        renderDonationSlider();
+        renderDonorPhoneSuggestions();
     });
 }
 
 function resetDonationForm() {
+    if (!addDonationForm) return;
     addDonationForm.reset();
     clearDonationImage();
     delete addDonationForm.editingId;
     
-    // Reset submit button text
     const submitBtn = addDonationForm.querySelector('button[type="submit"]');
-    submitBtn.textContent = 'Add Donation';
+    if (submitBtn) submitBtn.textContent = 'Add Donation';
     
-    // Hide cancel button
     const cancelBtn = document.getElementById('cancelDonationBtn');
-    if (cancelBtn) {
-        cancelBtn.style.display = 'none';
-    }
+    if (cancelBtn) cancelBtn.style.display = 'none';
 }
 
-// Cancel button functionality
 const cancelDonationBtn = document.getElementById('cancelDonationBtn');
 if (cancelDonationBtn) {
     cancelDonationBtn.addEventListener('click', () => {
@@ -1137,205 +1168,15 @@ function showAddDonationMessage(message, type) {
     
     if (!message) {
         messageEl.style.display = 'none';
-        messageEl.textContent = '';
         return;
     }
     
     messageEl.textContent = message;
     messageEl.style.display = 'block';
-    
-    if (type === 'success') {
-        messageEl.style.background = '#dcfce7';
-        messageEl.style.color = '#166534';
-        messageEl.style.border = '1px solid #86efac';
-    } else if (type === 'error') {
-        messageEl.style.background = '#fee2e2';
-        messageEl.style.color = '#991b1b';
-        messageEl.style.border = '1px solid #fca5a5';
-    }
+    messageEl.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
+    messageEl.style.color = type === 'success' ? '#166534' : '#991b1b';
+    messageEl.style.border = type === 'success' ? '1px solid #86efac' : '1px solid #fca5a5';
 }
-
-// ==================== OLD DONOR FORM (REMOVE) ====================
-const galleryUploadArea = document.getElementById('galleryUploadArea');
-const galleryFileInput = document.getElementById('galleryFileInput');
-const galleryCaption = document.getElementById('galleryCaption');
-
-if (galleryUploadArea) {
-    galleryUploadArea.addEventListener('click', () => galleryFileInput.click());
-
-    galleryUploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        galleryUploadArea.style.borderColor = 'var(--primary)';
-        galleryUploadArea.style.background = 'var(--primary-light)';
-    });
-
-    galleryUploadArea.addEventListener('dragleave', () => {
-        galleryUploadArea.style.borderColor = '';
-        galleryUploadArea.style.background = '';
-    });
-
-    galleryUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        galleryUploadArea.style.borderColor = '';
-        galleryUploadArea.style.background = '';
-        handleGalleryFiles(e.dataTransfer.files);
-    });
-}
-
-if (galleryFileInput) {
-    galleryFileInput.addEventListener('change', (e) => {
-        handleGalleryFiles(e.target.files);
-        e.target.value = '';
-    });
-}
-
-function handleGalleryFiles(files) {
-    if (!galleryCaption) return;
-    const caption = galleryCaption.value.trim();
-    Array.from(files).forEach(file => {
-        if (file.size > 2 * 1024 * 1024) {
-            alert('File size must be less than 2MB!');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const images = getGalleryImages();
-            images.push({
-                id: Date.now() + Math.random(),
-                data: e.target.result,
-                caption: caption || 'Blood Donation Activity',
-                uploadedAt: new Date().toISOString()
-            });
-            try {
-                saveGalleryImages(images);
-                renderAdminGalleryPreview();
-                renderGallery();
-                updateStats();
-                galleryCaption.value = '';
-            } catch (err) {
-                alert('Storage full! Image could not be saved.');
-            }
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-function renderAdminGalleryPreview() {
-    const images = getGalleryImages();
-    const preview = document.getElementById('galleryPreview');
-    if (!preview) return;
-
-    if (images.length === 0) {
-        preview.innerHTML = '<p style="color:#999; grid-column:1/-1; text-align:center;">No images uploaded</p>';
-        return;
-    }
-
-    preview.innerHTML = images.map(img => `
-        <div class="upload-thumb">
-            <img src="${img.data}" alt="${img.caption}">
-            <button class="remove-img" onclick="removeGalleryImage(${img.id})">✕</button>
-        </div>
-    `).join('');
-}
-
-window.removeGalleryImage = function(id) {
-    let images = getGalleryImages();
-    images = images.filter(img => img.id !== id);
-    saveGalleryImages(images);
-    renderAdminGalleryPreview();
-    renderGallery();
-    updateStats();
-};
-
-// ==================== ADMIN: CERTIFICATE TABLE ====================
-function renderAdminCertificateTable() {
-    const tbody = document.getElementById('adminCertificateBody');
-    if (!tbody) return; // Exit if not on admin page
-    
-    const certificates = getCertificates();
-
-    if (certificates.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">No certificates generated</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = certificates.map((cert, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td>${cert.donorName}</td>
-            <td><span class="donor-blood">${cert.bloodGroup}</span></td>
-            <td>${new Date(cert.donationDate).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            })}</td>
-            <td>${new Date(cert.generatedAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            })}</td>
-            <td>
-                <button class="view-btn" onclick="viewCertificate(${cert.id})">View</button>
-                <button class="delete-btn" onclick="deleteCertificate(${cert.id})">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-window.viewCertificate = function(id) {
-    window.open(`certificate.html?id=${id}`, '_blank');
-};
-
-window.deleteCertificate = function(id) {
-    if (confirm('Are you sure you want to delete this certificate?')) {
-        let certificates = getCertificates();
-        certificates = certificates.filter(c => c.id !== id);
-        saveCertificates(certificates);
-        renderAdminCertificateTable();
-        updateStats();
-    }
-};
-
-// Donor photo upload functionality removed - elements no longer exist in admin panel
-
-// ==================== KEYBOARD SHORTCUTS ====================
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (lightbox) lightbox.classList.remove('active');
-        const adminDashboard = document.getElementById('adminDashboard');
-        if (adminDashboard && adminDashboard.classList.contains('active')) {
-            adminDashboard.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-    }
-});
-
-// ==================== ADMIN: TAB SWITCHING ====================
-document.addEventListener('DOMContentLoaded', () => {
-    // Tab switching functionality
-    const adminTabs = document.querySelectorAll('.admin-tab');
-    adminTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const targetTab = tab.getAttribute('data-tab');
-            
-            // Remove active class from all tabs and panels
-            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
-            
-            // Add active class to clicked tab and corresponding panel
-            tab.classList.add('active');
-            const targetPanel = document.getElementById(targetTab);
-            if (targetPanel) {
-                targetPanel.classList.add('active');
-            }
-        });
-    });
-    
-    renderDonorList();
-    renderGallery();
-    renderDonationSlider();
-    updateStats();
-});
 
 // ==================== CERTIFICATE GENERATOR ====================
 function populateCertificateDonationSelect() {
@@ -1352,271 +1193,80 @@ function populateCertificateDonationSelect() {
         select.appendChild(option);
     });
 }
+
 function generateCertificate(donationId, message) {
     const donations = getDonations();
     const donation = donations.find(d => d.id === parseInt(donationId));
-    
     if (!donation) return null;
 
-    const fetchAsDataUrl = (url, fallbackDataUrl) => {
-        return fetch(url)
-            .then(response => response.blob())
-            .then(blob => new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            }))
-            .catch(() => fallbackDataUrl);
-    };
+    const donationDate = new Date(donation.date);
+    const donationDateLabel = isNaN(donationDate.getTime())
+        ? (donation.date || '')
+        : donationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const issuedOnLabel = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const safeMessage = message ? String(message).trim() : '';
 
-    const logoPromise = fetchAsDataUrl(
-        '../uploads/logo.png',
-        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjYwIiBjeT0iNjAiIHI9IjYwIiBmaWxsPSIjZGMyNjI2Ii8+Cjx0ZXh0IHg9IjYwIiB5PSI3NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjQwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0I8L3RleHQ+Cjwvc3ZnPg=='
-    );
-
-    const signaturePromise = fetchAsDataUrl(
-        '../uploads/authorized%20signature.png',
-        ''
-    );
-
-    // Fetch certificate background SVG (Certificate.svg)
-    const backgroundPromise = fetch('../uploads/Certificate.svg')
-        .then(response => response.text())
-        .catch(() => null);
-
-    return Promise.all([logoPromise, signaturePromise, backgroundPromise]).then(([logoDataUrl, signatureDataUrl, backgroundSvg]) => {
-        const donationDate = new Date(donation.date);
-        const donationDateLabel = isNaN(donationDate.getTime())
-            ? (donation.date || '')
-            : donationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        const issuedOnLabel = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        const safeMessage = message ? String(message).trim() : '';
-
-        // Use Certificate.svg as background
-        const backgroundDataUrl = backgroundSvg ? `data:image/svg+xml;base64,${btoa(backgroundSvg)}` : '';
-
-        const certificateHtml = `
-            <style>
-                @page { size: A4 landscape; margin: 0; }
-                @media print {
-                    html, body { margin: 0; padding: 0; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                }
-                .cb-cert {
-                    position: relative;
-                    width: 842px;
-                    height: 595px;
-                    margin: 0 auto;
-                    overflow: hidden;
-                    font-family: 'Noto Sans Bengali', Arial, sans-serif;
-                    background: #fff;
-                }
-                .cb-cert-bg {
-                    position: absolute;
-                    top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
-                    background-image: url('${backgroundDataUrl}');
-                    background-size: cover;
-                    background-position: center;
-                    background-repeat: no-repeat;
-                    opacity: 1;
-                }
-                .cb-cert-content {
-                    position: relative;
-                    z-index: 2;
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    padding: 60px 40px 40px 40px;
-                    box-sizing: border-box;
-                }
-                .cb-cert-title {
-                    font-size: 40px;
-                    font-weight: 700;
-                    color: #dc2626;
-                    text-align: center;
-                    margin-bottom: 8px;
-                    text-shadow: 2px 2px 4px rgba(0,0,0,0.08);
-                    letter-spacing: 2px;
-                }
-                .cb-cert-subtitle {
-                    font-size: 22px;
-                    color: #374151;
-                    text-align: center;
-                    margin-bottom: 32px;
-                    font-weight: 500;
-                }
-                .cb-cert-recipient {
-                    font-size: 30px;
-                    font-weight: 700;
-                    color: #1f2937;
-                    text-align: center;
-                    margin-bottom: 18px;
-                    padding: 12px 32px;
-                    background: rgba(255,255,255,0.92);
-                    border-radius: 10px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                }
-                .cb-cert-details {
-                    text-align: center;
-                    margin-bottom: 28px;
-                }
-                .cb-cert-detail-item {
-                    font-size: 18px;
-                    color: #4b5563;
-                    margin: 6px 0;
-                }
-                .cb-cert-message {
-                    font-size: 18px;
-                    color: #374151;
-                    text-align: center;
-                    max-width: 600px;
-                    margin-bottom: 32px;
-                    padding: 18px;
-                    background: rgba(255,255,255,0.85);
-                    border-radius: 10px;
-                    line-height: 1.6;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-                }
-                .cb-cert-footer {
-                    position: absolute;
-                    bottom: 40px;
-                    left: 0;
-                    right: 0;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-end;
-                    padding: 0 60px;
-                    box-sizing: border-box;
-                }
-                .cb-cert-signature {
-                    text-align: center;
-                }
-                .cb-cert-signature-line {
-                    width: 200px;
-                    height: 1px;
-                    background: #374151;
-                    margin-bottom: 5px;
-                }
-                .cb-cert-signature-text {
-                    font-size: 14px;
-                    color: #6b7280;
-                }
-                .cb-cert-date {
-                    text-align: right;
-                    font-size: 16px;
-                    color: #4b5563;
-                }
-                .cb-cert-logo {
-                    position: absolute;
-                    top: 30px;
-                    left: 30px;
-                    width: 70px;
-                    height: 70px;
-                    border-radius: 10px;
-                    object-fit: contain;
-                    background: #fff;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-                }
-                .cb-cert-id {
-                    position: absolute;
-                    top: 30px;
-                    right: 30px;
-                    font-size: 14px;
-                    color: #6b7280;
-                    background: rgba(255,255,255,0.92);
-                    padding: 7px 16px;
-                    border-radius: 6px;
-                    font-weight: 500;
-                }
-            </style>
-            <div class="cb-cert">
-                <div class="cb-cert-bg"></div>
-                <img src="${logoDataUrl}" alt="Logo" class="cb-cert-logo">
-                <div class="cb-cert-id">Certificate ID: ${donation.number}</div>
-                <div class="cb-cert-content">
-                    <h1 class="cb-cert-title">Blood Donation Certificate</h1>
-                    <p class="cb-cert-subtitle">Certificate of Appreciation</p>
-                    <div class="cb-cert-recipient">${donation.donorName}</div>
-                    <div class="cb-cert-details">
-                        <div class="cb-cert-detail-item"><strong>Blood Group:</strong> ${donation.bloodGroup}</div>
-                        <div class="cb-cert-detail-item"><strong>Donation Date:</strong> ${donationDateLabel}</div>
-                        <div class="cb-cert-detail-item"><strong>Contact:</strong> ${donation.donorPhone}</div>
-                    </div>
-                    ${safeMessage ? `<div class="cb-cert-message">${safeMessage}</div>` : ''}
-                    <div class="cb-cert-footer">
-                        <div class="cb-cert-signature">
-                            ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="Signature" style="max-height: 60px; margin-bottom: 5px;">` : '<div class="cb-cert-signature-line"></div>'}
-                            <div class="cb-cert-signature-text">Authorized Signature</div>
-                        </div>
-                        <div class="cb-cert-date">
-                            <div>Issued on: ${issuedOnLabel}</div>
-                        </div>
-                    </div>
+    const certificateHtml = `
+        <style>
+            @page { size: A4 landscape; margin: 0; }
+            .cb-cert {
+                position: relative;
+                width: 842px;
+                height: 595px;
+                margin: 0 auto;
+                font-family: 'Noto Sans Bengali', Arial, sans-serif;
+                background: #fff;
+                border: 12px double #dc2626;
+                box-sizing: border-box;
+                padding: 40px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                text-align: center;
+            }
+            .cb-cert-title { font-size: 32px; font-weight: 800; color: #dc2626; margin: 0 0 4px 0; }
+            .cb-cert-sub { font-size: 18px; color: #4b5563; margin: 0 0 20px 0; }
+            .cb-cert-name { font-size: 26px; font-weight: 700; color: #111827; margin: 10px 0; }
+            .cb-cert-details { font-size: 16px; color: #374151; margin: 12px 0; line-height: 1.8; }
+            .cb-cert-message { font-size: 15px; color: #4b5563; margin: 12px auto; max-width: 600px; font-style: italic; }
+            .cb-cert-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb; }
+        </style>
+        <div class="cb-cert">
+            <div>
+                <h1 class="cb-cert-title">চাঁভালি রক্ত ফাউন্ডেশন</h1>
+                <p class="cb-cert-sub">রক্তদান সম্মাননা ও প্রশংসাপত্র</p>
+                <p style="color:#6b7280; font-size:14px;">সনদ নম্বর: ${donation.number}</p>
+            </div>
+            <div>
+                <p style="font-size:16px; color:#4b5563;">এই প্রশংসাপত্রটি সশ্রদ্ধ চিত্তে প্রদান করা হচ্ছে</p>
+                <div class="cb-cert-name">${donation.donorName}</div>
+                <div class="cb-cert-details">
+                    <strong>রক্তের গ্রুপ:</strong> ${donation.bloodGroup} &nbsp;|&nbsp; 
+                    <strong>রক্তদানের তারিখ:</strong> ${donationDateLabel} &nbsp;|&nbsp; 
+                    <strong>ঠিকানা:</strong> ${donation.donorAddress}
+                </div>
+                ${safeMessage ? `<div class="cb-cert-message">${safeMessage}</div>` : ''}
+            </div>
+            <div class="cb-cert-footer">
+                <div style="text-align:left;">
+                    <div style="font-weight:700; color:#dc2626;">চাঁভালি রক্ত ফাউন্ডেশন</div>
+                    <div style="font-size:13px; color:#6b7280;">রক্তের বন্ধনে, চাঁভালি সবখানে</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:14px; color:#4b5563;">প্রদানের তারিখ: ${issuedOnLabel}</div>
+                    <div style="margin-top:20px; border-top:1px solid #374151; font-size:12px; color:#6b7280; padding-top:2px;">অনুমোদিত স্বাক্ষর</div>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        return certificateHtml;
-    });
+    return certificateHtml;
 }
 
-function downloadCertificate() {
-    const certificateContainer = document.getElementById('certificateContainer');
-    if (!certificateContainer) return;
-    
-    // Use html2canvas to capture the certificate
-    html2canvas(certificateContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-    }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'blood_donation_certificate.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    }).catch(err => {
-        console.error('Error generating certificate image:', err);
-        alert('Error generating certificate. Please try again.');
-    });
-}
-
-function printCertificate() {
-    const certificateContainer = document.getElementById('certificateContainer');
-    if (!certificateContainer) return;
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Blood Donation Certificate</title>
-                <style>
-                    @page { size: A4 landscape; margin: 10mm; }
-                    html, body { margin: 0; padding: 0; }
-                    body { padding: 10mm; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .certificate { width: 297mm; min-height: 210mm; margin: 0 auto; }
-                </style>
-            </head>
-            <body>
-                <div class="certificate">
-                    ${certificateContainer.innerHTML}
-                </div>
-            </body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-}
-
-// Certificate form handling
 const certificateForm = document.getElementById('certificateForm');
 if (certificateForm) {
     certificateForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const donationId = document.getElementById('certificateDonationSelect')?.value;
         const message = document.getElementById('certificateMessage')?.value.trim();
         
@@ -1624,182 +1274,220 @@ if (certificateForm) {
             showCertificateMessage('Please select a donation record', 'error');
             return;
         }
-        
-        try {
-            const certificateHtml = await generateCertificate(donationId, message);
-            if (certificateHtml) {
-                const container = document.getElementById('certificateContainer');
-                const preview = document.getElementById('certificatePreview');
+
+        const certificateHtml = generateCertificate(donationId, message);
+        if (certificateHtml) {
+            const container = document.getElementById('certificateContainer');
+            const preview = document.getElementById('certificatePreview');
+            
+            if (container && preview) {
+                container.innerHTML = certificateHtml;
+                preview.style.display = 'block';
+                showCertificateMessage('Certificate generated successfully!', 'success');
+
+                const donations = getDonations();
+                const donation = donations.find(d => d.id === parseInt(donationId));
                 
-                if (container && preview) {
-                    container.innerHTML = certificateHtml;
-                    preview.style.display = 'block';
-                    showCertificateMessage('Certificate generated successfully!', 'success');
-                    
-                    // Save certificate to localStorage
-                    const donations = getDonations();
-                    const donation = donations.find(d => d.id === parseInt(donationId));
-                    
-                    if (donation) {
-                        const certificate = {
-                            id: Date.now(),
-                            donationId: parseInt(donationId),
-                            donorName: donation.donorName,
-                            bloodGroup: donation.bloodGroup,
-                            donationDate: donation.date,
-                            phone: donation.donorPhone,
-                            address: donation.donorAddress,
-                            donationNumber: donation.number,
-                            message: message,
-                            htmlContent: certificateHtml,
-                            generatedAt: new Date().toISOString()
-                        };
-                        
-                        saveCertificate(certificate);
-                        renderAdminCertificateTable();
-                        updateStats();
-                    }
-                    
-                    // Scroll to certificate
-                    preview.scrollIntoView({ behavior: 'smooth' });
+                if (donation) {
+                    const certificateData = {
+                        donationId: parseInt(donationId),
+                        donorName: donation.donorName,
+                        bloodGroup: donation.bloodGroup,
+                        donationDate: donation.date,
+                        phone: donation.donorPhone,
+                        address: donation.donorAddress,
+                        donationNumber: donation.number,
+                        message: message,
+                        htmlContent: certificateHtml,
+                        generatedAt: new Date().toISOString()
+                    };
+
+                    await API.createCertificate(certificateData);
+                    saveCertificate({ id: Date.now(), ...certificateData });
+                    renderAdminCertificateTable();
+                    updateStats();
                 }
-            } else {
-                showCertificateMessage('Error generating certificate', 'error');
+
+                preview.scrollIntoView({ behavior: 'smooth' });
             }
-        } catch (error) {
-            console.error('Certificate generation error:', error);
-            showCertificateMessage('Error loading certificate resources', 'error');
         }
     });
 }
 
-// Certificate action buttons
-const downloadBtn = document.getElementById('downloadCertificateBtn');
-const printBtn = document.getElementById('printCertificateBtn');
-
-if (downloadBtn) {
-    downloadBtn.addEventListener('click', downloadCertificate);
+function showCertificateMessage(message, type) {
+    const messageEl = document.getElementById('certificateMessageDisplay');
+    if (!messageEl) return;
+    if (!message) { messageEl.style.display = 'none'; return; }
+    messageEl.textContent = message;
+    messageEl.style.display = 'block';
+    messageEl.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
+    messageEl.style.color = type === 'success' ? '#166534' : '#991b1b';
 }
 
-if (printBtn) {
-    printBtn.addEventListener('click', printCertificate);
+// Download & Print Certificate
+function downloadCertificate() {
+    const container = document.getElementById('certificateContainer');
+    if (!container || typeof html2canvas === 'undefined') {
+        alert('Please print the certificate or use browser print.');
+        return;
+    }
+    html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'chavali_blood_certificate.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
 }
+
+function printCertificate() {
+    const container = document.getElementById('certificateContainer');
+    if (!container) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Blood Donation Certificate</title>
+                <style>
+                    @page { size: A4 landscape; margin: 0; }
+                    body { margin: 0; padding: 20px; font-family: 'Noto Sans Bengali', Arial, sans-serif; }
+                </style>
+            </head>
+            <body>${container.innerHTML}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+const downloadCertificateBtn = document.getElementById('downloadCertificateBtn');
+if (downloadCertificateBtn) downloadCertificateBtn.addEventListener('click', downloadCertificate);
+
+const printCertificateBtn = document.getElementById('printCertificateBtn');
+if (printCertificateBtn) printCertificateBtn.addEventListener('click', printCertificate);
+
+// ==================== ADMIN: CERTIFICATE TABLE ====================
+async function renderAdminCertificateTable() {
+    const tbody = document.getElementById('adminCertificateBody');
+    if (!tbody) return;
+
+    let certificates = getCertificates();
+    const res = await API.getCertificates();
+    if (res.ok && Array.isArray(res.data)) {
+        certificates = res.data;
+        saveCertificates(certificates);
+    }
+
+    if (certificates.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">No certificates generated yet</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = certificates.map((cert, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${cert.donorName}</td>
+            <td><span class="donor-blood">${cert.bloodGroup}</span></td>
+            <td>${cert.donationDate}</td>
+            <td>${new Date(cert.generatedAt).toLocaleDateString()}</td>
+            <td>
+                <button class="delete-btn" onclick="deleteCertificate(${cert.id})">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.deleteCertificate = async function(id) {
+    if (confirm('Are you sure you want to delete this certificate?')) {
+        await API.deleteCertificate(id);
+        let certificates = getCertificates().filter(c => c.id !== id);
+        saveCertificates(certificates);
+        renderAdminCertificateTable();
+        updateStats();
+    }
+};
 
 // ==================== ADMIN: CHANGE PASSWORD ====================
 const changePasswordForm = document.getElementById('changePasswordForm');
 if (changePasswordForm) {
-    changePasswordForm.addEventListener('submit', (e) => {
+    changePasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const currentPassword = document.getElementById('currentPassword')?.value;
         const newPassword = document.getElementById('newPassword')?.value;
         const confirmPassword = document.getElementById('confirmPassword')?.value;
         const messageEl = document.getElementById('changePasswordMessage');
-        
-        // Validate input
+
         if (!currentPassword || !newPassword || !confirmPassword) {
             showPasswordMessage('Please fill all fields', 'error', messageEl);
             return;
         }
-        
+
         if (newPassword.length < 6) {
             showPasswordMessage('New password must be at least 6 characters long', 'error', messageEl);
             return;
         }
-        
+
         if (newPassword !== confirmPassword) {
             showPasswordMessage('New passwords do not match', 'error', messageEl);
             return;
         }
-        
-        // Verify current password
-        const storedPassword = localStorage.getItem('chavali_admin_password');
-        if (currentPassword !== storedPassword) {
-            showPasswordMessage('Current password is incorrect', 'error', messageEl);
-            return;
-        }
-        
-        // Update password
-        localStorage.setItem('chavali_admin_password', newPassword);
-        showPasswordMessage('Password changed successfully!', 'success', messageEl);
-        changePasswordForm.reset();
-        
-        // Hide message after 3 seconds
-        setTimeout(() => {
-            messageEl.style.display = 'none';
-        }, 3000);
-    });
-}
 
-function showCertificateMessage(message, type) {
-    const messageEl = document.getElementById('certificateMessageDisplay');
-    if (!messageEl) return;
-    
-    if (!message) {
-        messageEl.style.display = 'none';
-        messageEl.textContent = '';
-        return;
-    }
-    
-    messageEl.textContent = message;
-    messageEl.style.display = 'block';
-    
-    if (type === 'success') {
-        messageEl.style.background = '#dcfce7';
-        messageEl.style.color = '#166534';
-        messageEl.style.border = '1px solid #86efac';
-    } else if (type === 'error') {
-        messageEl.style.background = '#fee2e2';
-        messageEl.style.color = '#991b1b';
-        messageEl.style.border = '1px solid #fca5a5';
-    }
+        const res = await API.changePassword(currentPassword, newPassword);
+
+        if (res.ok) {
+            localStorage.setItem('chavali_admin_password', newPassword);
+            showPasswordMessage('Password changed successfully in Neon DB!', 'success', messageEl);
+            changePasswordForm.reset();
+        } else {
+            showPasswordMessage(res.message || 'Failed to update password', 'error', messageEl);
+        }
+    });
 }
 
 function showPasswordMessage(message, type, messageEl) {
     if (!messageEl) return;
-    
     messageEl.textContent = message;
     messageEl.style.display = 'block';
-    
-    // Remove previous type classes
-    messageEl.classList.remove('success', 'error');
-    
-    if (type === 'success') {
-        messageEl.style.background = '#dcfce7';
-        messageEl.style.color = '#166534';
-        messageEl.style.border = '1px solid #86efac';
-        messageEl.style.borderLeftColor = '#16a34a';
-        messageEl.classList.add('success');
-    } else if (type === 'error') {
-        messageEl.style.background = '#fee2e2';
-        messageEl.style.color = '#991b1b';
-        messageEl.style.border = '1px solid #fca5a5';
-        messageEl.style.borderLeftColor = '#dc2626';
-        messageEl.classList.add('error');
-    }
+    messageEl.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
+    messageEl.style.color = type === 'success' ? '#166534' : '#991b1b';
 }
 
-function showCertificateMessage(message, type) {
-    const messageEl = document.getElementById('certificateMessageDisplay');
-    if (!messageEl) return;
-    
-    if (!message) {
-        messageEl.style.display = 'none';
-        messageEl.textContent = '';
-        return;
+// Password toggle fields
+[
+    { toggleId: 'currentPasswordToggle', inputId: 'currentPassword' },
+    { toggleId: 'newPasswordToggle', inputId: 'newPassword' },
+    { toggleId: 'confirmPasswordToggle', inputId: 'confirmPassword' }
+].forEach(field => {
+    const toggle = document.getElementById(field.toggleId);
+    const input = document.getElementById(field.inputId);
+    if (toggle && input) {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            const eyeIcon = toggle.querySelector('.eye-icon');
+            if (eyeIcon) eyeIcon.textContent = isPassword ? '🙈' : '👁️';
+        });
     }
-    
-    messageEl.textContent = message;
-    messageEl.style.display = 'block';
-    
-    if (type === 'success') {
-        messageEl.style.background = '#dcfce7';
-        messageEl.style.color = '#166534';
-        messageEl.style.border = '1px solid #86efac';
-    } else if (type === 'error') {
-        messageEl.style.background = '#fee2e2';
-        messageEl.style.color = '#991b1b';
-        messageEl.style.border = '1px solid #fca5a5';
-    }
-}
+});
 
+// ==================== INITIALIZATION ON PAGE LOAD ====================
+document.addEventListener('DOMContentLoaded', () => {
+    renderDonorList();
+    renderGallery();
+    renderDonationSlider();
+    updateStats();
+
+    const adminDashboard = document.getElementById('adminDashboard');
+    const adminLogin = document.getElementById('adminLogin');
+    if (adminDashboard || adminLogin) {
+        if (isAdminLoggedIn()) {
+            showAdminDashboard();
+            renderAdminDonorTable();
+            renderAdminDonationTable();
+            renderAdminCertificateTable();
+            populateCertificateDonationSelect();
+        } else {
+            showLoginForm();
+        }
+    }
+});
