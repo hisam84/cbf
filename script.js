@@ -87,7 +87,15 @@ const API = {
                     ...(options.headers || {})
                 }
             });
-            const data = await res.json();
+            const text = await res.text();
+            let data = {};
+            if (text) {
+                try {
+                    data = JSON.parse(text);
+                } catch (jsonErr) {
+                    data = { message: text.length > 120 ? `Server returned HTTP ${res.status}` : text };
+                }
+            }
             return { ok: res.ok, status: res.status, ...data };
         } catch (err) {
             console.warn(`API request to ${endpoint} failed (using offline fallback):`, err.message);

@@ -55,10 +55,12 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        if (!id) {
+        const rawId = req.params.id;
+        if (!rawId) {
             return res.status(400).json({ success: false, message: 'Invalid certificate ID' });
         }
+
+        const idStr = String(rawId).trim();
 
         if (isConfigured()) {
             const sql = getSql();
@@ -68,7 +70,7 @@ router.get('/:id', async (req, res) => {
                        phone, address, donation_number as "donationNumber",
                        message, html_content as "htmlContent", generated_at as "generatedAt"
                 FROM certificates
-                WHERE id = ${id};
+                WHERE id::text = ${idStr};
             `;
 
             if (rows.length === 0) {

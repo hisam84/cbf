@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
         console.error('Error fetching gallery:', err);
         return res.status(500).json({
             success: false,
-            message: 'Failed to fetch gallery images',
+            message: 'Failed to fetch gallery from database',
             error: err.message
         });
     }
@@ -63,13 +63,14 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/gallery
- * Admin endpoint to upload new image to gallery in Neon DB
+ * Admin endpoint to upload/save a photo to Neon DB
+ * Body: { imageData: base64, caption: string, category?: string }
  */
 router.post('/', requireAdminAuth, async (req, res) => {
     try {
-        const { data, caption, category } = req.body || {};
+        const { imageData, caption, category = 'general' } = req.body || {};
 
-        if (!data) {
+        if (!imageData) {
             return res.status(400).json({
                 success: false,
                 message: 'Image data is required'
@@ -80,25 +81,25 @@ router.post('/', requireAdminAuth, async (req, res) => {
             const sql = getSql();
             const inserted = await sql`
                 INSERT INTO gallery (caption, image_data, category)
-                VALUES (${caption || 'Blood Donation Activity'}, ${data}, ${category || 'general'})
+                VALUES (${caption ? caption.trim() : null}, ${imageData}, ${category})
                 RETURNING id, caption, image_data as "data", category, uploaded_at as "uploadedAt";
             `;
 
             return res.status(201).json({
                 success: true,
-                message: 'Image added to gallery in Neon database',
+                message: 'Photo saved successfully in Neon database',
                 data: inserted[0]
             });
         }
 
         return res.status(201).json({
             success: true,
-            message: 'Image added (local mode)',
+            message: 'Photo saved (local mode)',
             data: {
                 id: Date.now(),
-                data,
-                caption: caption || 'Blood Donation Activity',
-                category: category || 'general',
+                caption,
+                data: imageData,
+                category,
                 uploadedAt: new Date().toISOString()
             }
         });
@@ -106,7 +107,7 @@ router.post('/', requireAdminAuth, async (req, res) => {
         console.error('Error adding gallery image:', err);
         return res.status(500).json({
             success: false,
-            message: 'Failed to save gallery image to database',
+            message: 'Failed to save photo to database',
             error: err.message
         });
     }

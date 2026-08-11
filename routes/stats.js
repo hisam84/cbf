@@ -4,15 +4,11 @@
 // ==============================================================================
 
 const express = require('express');
-const cors = require('cors');
+const router = express.Router();
 const { isConfigured, getSql } = require('../lib/db');
 require('dotenv').config();
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-async function handleStats(req, res) {
+router.get('/', async (req, res) => {
     try {
         if (isConfigured()) {
             const sql = getSql();
@@ -38,11 +34,13 @@ async function handleStats(req, res) {
                 success: true,
                 source: 'neon_postgres',
                 stats: {
-                    totalDonors: donorsCount?.count || 0,
-                    totalDonations: donationsCount?.count || 0,
-                    totalCertificates: certificatesCount?.count || 0,
-                    totalBloodTypes: 8,
-                    bloodGroupBreakdown: bloodGroupBreakdown || []
+                    totalDonors: donorsCount.count,
+                    totalDonations: donationsCount.count,
+                    totalCertificates: certificatesCount.count,
+                    bloodGroupBreakdown: bloodGroupBreakdown.reduce((acc, row) => {
+                        acc[row.bloodGroup] = row.count;
+                        return acc;
+                    }, {})
                 }
             });
         }
@@ -54,20 +52,17 @@ async function handleStats(req, res) {
                 totalDonors: 0,
                 totalDonations: 0,
                 totalCertificates: 0,
-                totalBloodTypes: 8,
-                bloodGroupBreakdown: []
+                bloodGroupBreakdown: {}
             }
         });
     } catch (err) {
-        console.error('Error calculating stats:', err);
+        console.error('Error fetching stats:', err);
         return res.status(500).json({
             success: false,
-            message: 'Failed to aggregate statistics',
+            message: 'Failed to fetch stats',
             error: err.message
         });
     }
-}
+});
 
-app.get(['/', '/stats', '/api/stats'], handleStats);
-
-module.exports = app;
+module.exports = router;

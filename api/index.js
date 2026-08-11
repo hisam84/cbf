@@ -1,6 +1,6 @@
 // ==============================================================================
 // Main API Router & Vercel Serverless Entrypoint
-// Bridges all modular endpoints (/api/auth, /api/donors, etc.) with Express & Vercel
+// Single Serverless Gateway for all modular endpoints (/api/auth, /api/donors, etc.)
 // ==============================================================================
 
 const express = require('express');
@@ -13,22 +13,22 @@ const app = express();
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-auth']
 }));
 
 // Body parsers with support for base64 images (up to 10MB)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Import route handlers
-const authRouter = require('./auth');
-const donorsRouter = require('./donors');
-const donationsRouter = require('./donations');
-const galleryRouter = require('./gallery');
-const certificatesRouter = require('./certificates');
-const statsRouter = require('./stats');
-const contactRouter = require('./contact');
-const healthRouter = require('./health');
+// Import route handlers from routes directory
+const authRouter = require('../routes/auth');
+const donorsRouter = require('../routes/donors');
+const donationsRouter = require('../routes/donations');
+const galleryRouter = require('../routes/gallery');
+const certificatesRouter = require('../routes/certificates');
+const statsRouter = require('../routes/stats');
+const contactRouter = require('../routes/contact');
+const healthRouter = require('../routes/health');
 
 // Dual mount: matches both with /api prefix and without /api prefix
 app.use(['/api/auth', '/auth'], authRouter);
