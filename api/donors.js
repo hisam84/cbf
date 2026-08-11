@@ -216,14 +216,16 @@ app.put(['/:id', '/api/donors/:id', '/donors/:id'], requireAdminAuth, async (req
  */
 app.delete(['/:id', '/api/donors/:id', '/donors/:id'], requireAdminAuth, async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        if (!id) {
+        const rawId = req.params.id;
+        if (!rawId) {
             return res.status(400).json({ success: false, message: 'Invalid donor ID' });
         }
 
+        const idStr = String(rawId).trim();
+
         if (isConfigured()) {
             const sql = getSql();
-            const deleted = await sql`DELETE FROM donors WHERE id = ${id} RETURNING id;`;
+            const deleted = await sql`DELETE FROM donors WHERE id::text = ${idStr} RETURNING id;`;
 
             if (deleted.length === 0) {
                 return res.status(404).json({ success: false, message: 'Donor not found' });
@@ -232,11 +234,11 @@ app.delete(['/:id', '/api/donors/:id', '/donors/:id'], requireAdminAuth, async (
             return res.json({
                 success: true,
                 message: 'Donor deleted successfully from database',
-                deletedId: id
+                deletedId: idStr
             });
         }
 
-        return res.json({ success: true, message: 'Donor deleted (local mode)', deletedId: id });
+        return res.json({ success: true, message: 'Donor deleted (local mode)', deletedId: idStr });
     } catch (err) {
         console.error('Error deleting donor:', err);
         return res.status(500).json({ success: false, message: 'Failed to delete donor', error: err.message });

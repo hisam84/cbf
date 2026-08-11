@@ -154,14 +154,16 @@ router.post('/', requireAdminAuth, async (req, res) => {
  */
 router.delete('/:id', requireAdminAuth, async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        if (!id) {
+        const rawId = req.params.id;
+        if (!rawId) {
             return res.status(400).json({ success: false, message: 'Invalid certificate ID' });
         }
 
+        const idStr = String(rawId).trim();
+
         if (isConfigured()) {
             const sql = getSql();
-            const deleted = await sql`DELETE FROM certificates WHERE id = ${id} RETURNING id;`;
+            const deleted = await sql`DELETE FROM certificates WHERE id::text = ${idStr} RETURNING id;`;
 
             if (deleted.length === 0) {
                 return res.status(404).json({ success: false, message: 'Certificate not found' });
@@ -170,11 +172,11 @@ router.delete('/:id', requireAdminAuth, async (req, res) => {
             return res.json({
                 success: true,
                 message: 'Certificate deleted successfully from database',
-                deletedId: id
+                deletedId: idStr
             });
         }
 
-        return res.json({ success: true, message: 'Certificate deleted (local mode)', deletedId: id });
+        return res.json({ success: true, message: 'Certificate deleted (local mode)', deletedId: idStr });
     } catch (err) {
         console.error('Error deleting certificate:', err);
         return res.status(500).json({

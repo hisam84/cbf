@@ -119,14 +119,14 @@ const API = {
     },
 
     async updateDonor(id, donorData) {
-        return await this.request(`/donors/${id}`, {
+        return await this.request(`/donors/${encodeURIComponent(id)}`, {
             method: 'PUT',
             body: JSON.stringify(donorData)
         });
     },
 
     async deleteDonor(id) {
-        return await this.request(`/donors/${id}`, {
+        return await this.request(`/donors/${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
     },
@@ -144,14 +144,14 @@ const API = {
     },
 
     async updateDonation(id, donationData) {
-        return await this.request(`/donations/${id}`, {
+        return await this.request(`/donations/${encodeURIComponent(id)}`, {
             method: 'PUT',
             body: JSON.stringify(donationData)
         });
     },
 
     async deleteDonation(id) {
-        return await this.request(`/donations/${id}`, {
+        return await this.request(`/donations/${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
     },
@@ -169,7 +169,7 @@ const API = {
     },
 
     async deleteGallery(id) {
-        return await this.request(`/gallery/${id}`, {
+        return await this.request(`/gallery/${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
     },
@@ -180,7 +180,7 @@ const API = {
     },
 
     async getCertificate(id) {
-        return await this.request(`/certificates/${id}`);
+        return await this.request(`/certificates/${encodeURIComponent(id)}`);
     },
 
     async createCertificate(certificateData) {
@@ -191,7 +191,7 @@ const API = {
     },
 
     async deleteCertificate(id) {
-        return await this.request(`/certificates/${id}`, {
+        return await this.request(`/certificates/${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
     },
@@ -918,19 +918,31 @@ async function renderAdminDonorTable() {
             <td><span class="donor-blood">${d.bloodGroup || d.blood_group}</span></td>
             <td>${d.address}</td>
             <td>${d.lastDonation || d.last_donation || 'Not mentioned'}</td>
-            <td><button class="delete-btn" onclick="deleteDonor(${d.id})">Delete</button></td>
+            <td><button class="delete-btn" onclick="deleteDonor('${String(d.id || '').replace(/'/g, "\\'")}')">Delete</button></td>
         </tr>
     `).join('');
 }
 
 window.deleteDonor = async function(id) {
+    if (!id) return;
     if (confirm('Are you sure you want to delete this donor?')) {
-        await API.deleteDonor(id);
-        let donors = getDonors().filter(d => String(d.id) !== String(id));
-        saveDonors(donors);
-        await renderAdminDonorTable();
-        renderDonorList(currentFilter);
-        updateStats();
+        try {
+            const res = await API.deleteDonor(id);
+            if (res.ok || res.success) {
+                let donors = getDonors().filter(d => String(d.id) !== String(id));
+                saveDonors(donors);
+                await renderAdminDonorTable();
+                renderDonorList(currentFilter);
+                updateStats();
+            } else {
+                console.error('Delete donor failed:', res);
+                alert(`Failed to delete donor: ${res.message || res.error || 'Server error'}`);
+                await renderAdminDonorTable();
+            }
+        } catch (err) {
+            console.error('Error deleting donor:', err);
+            alert(`Error deleting donor: ${err.message}`);
+        }
     }
 };
 
@@ -951,7 +963,9 @@ async function renderAdminDonationTable() {
         return;
     }
 
-    tbody.innerHTML = donations.map((d, i) => `
+    tbody.innerHTML = donations.map((d, i) => {
+        const donationKey = String(d.id || d.number || '').replace(/'/g, "\\'");
+        return `
         <tr>
             <td>${i + 1}</td>
             <td>${d.donorName || 'N/A'}</td>
@@ -961,15 +975,16 @@ async function renderAdminDonationTable() {
             <td><span class="donor-blood">${d.bloodGroup}</span></td>
             <td>${d.date}</td>
             <td>${d.image ? '<img src="' + d.image + '" style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;" onclick="openLightbox(\'' + d.image + '\')" alt="Donation Image">' : 'No Image'}</td>
-            <td><button class="delete-btn" onclick="deleteDonation(${d.id})">Delete</button></td>
-            <td><button class="edit-btn" onclick="editDonation(${d.id})">Edit</button></td>
+            <td><button class="delete-btn" onclick="deleteDonation('${donationKey}')">Delete</button></td>
+            <td><button class="edit-btn" onclick="editDonation('${donationKey}')">Edit</button></td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 window.editDonation = function(id) {
     const donations = getDonations();
-    const donation = donations.find(d => d.id === id);
+    const donation = donations.find(d => String(d.id) === String(id) || String(d.number) === String(id));
     if (!donation) return;
 
     document.getElementById('addDonorName').value = donation.donorName || '';
@@ -995,7 +1010,7 @@ window.editDonation = function(id) {
         }
     }
 
-    addDonationForm.editingId = id;
+    addDonationForm.editingId = donation.id || id;
     const submitBtn = addDonationForm.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.textContent = 'Update Donation';
 
@@ -1013,13 +1028,29 @@ window.editDonation = function(id) {
 };
 
 window.deleteDonation = async function(id) {
+    if (!id) {
+        alert('Invalid donation record ID.');
+        return;
+    }
     if (confirm('Are you sure you want to delete this donation record?')) {
-        const res = await API.deleteDonation(id);
-        let donations = getDonations().filter(d => String(d.id) !== String(id) && String(d.number) !== String(id));
-        saveDonations(donations);
-        await renderAdminDonationTable();
-        updateStats();
-        renderDonationSlider();
+        try {
+            const res = await API.deleteDonation(id);
+            if (res.ok || res.success) {
+                let donations = getDonations().filter(d => String(d.id) !== String(id) && String(d.number) !== String(id));
+                saveDonations(donations);
+                await renderAdminDonationTable();
+                updateStats();
+                renderDonationSlider();
+                populateCertificateDonationSelect();
+            } else {
+                console.error('Delete donation failed:', res);
+                alert(`Failed to delete donation record: ${res.message || res.error || 'Server error'}`);
+                await renderAdminDonationTable();
+            }
+        } catch (err) {
+            console.error('Error deleting donation:', err);
+            alert(`Error deleting donation: ${err.message}`);
+        }
     }
 };
 
@@ -1373,19 +1404,31 @@ async function renderAdminGalleryPreview() {
             <div style="padding:8px 10px;">
                 <p style="margin:0; font-size:0.85rem; font-weight:500; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${img.caption || 'Blood Activity'}</p>
             </div>
-            <button onclick="deleteGalleryPhoto(${img.id})" style="position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%; background:rgba(220,38,38,0.9); color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;" title="Delete Photo">✕</button>
+            <button onclick="deleteGalleryPhoto('${String(img.id || '').replace(/'/g, "\\'")}')" style="position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%; background:rgba(220,38,38,0.9); color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;" title="Delete Photo">✕</button>
         </div>
     `).join('');
 }
 
 window.deleteGalleryPhoto = async function(id) {
+    if (!id) return;
     if (confirm('Are you sure you want to delete this photo from Neon DB?')) {
-        await API.deleteGallery(id);
-        let gallery = getGalleryImages().filter(g => g.id !== id);
-        saveGalleryImages(gallery);
-        renderAdminGalleryPreview();
-        renderGallery();
-        updateStats();
+        try {
+            const res = await API.deleteGallery(id);
+            if (res.ok || res.success) {
+                let gallery = getGalleryImages().filter(g => String(g.id) !== String(id));
+                saveGalleryImages(gallery);
+                renderAdminGalleryPreview();
+                renderGallery();
+                updateStats();
+            } else {
+                console.error('Delete gallery photo failed:', res);
+                alert(`Failed to delete gallery photo: ${res.message || res.error || 'Server error'}`);
+                renderAdminGalleryPreview();
+            }
+        } catch (err) {
+            console.error('Error deleting photo:', err);
+            alert(`Error deleting photo: ${err.message}`);
+        }
     }
 };
 
@@ -1399,7 +1442,7 @@ function populateCertificateDonationSelect() {
     
     donations.forEach(donation => {
         const option = document.createElement('option');
-        option.value = donation.id;
+        option.value = donation.id || donation.number;
         option.textContent = `${donation.donorName} - ${donation.bloodGroup} - ${donation.date} (ID: ${donation.number})`;
         select.appendChild(option);
     });
@@ -1407,7 +1450,7 @@ function populateCertificateDonationSelect() {
 
 function generateCertificate(donationId, message) {
     const donations = getDonations();
-    const donation = donations.find(d => d.id === parseInt(donationId));
+    const donation = donations.find(d => String(d.id) === String(donationId) || String(d.number) === String(donationId));
     if (!donation) return null;
 
     const donationDate = new Date(donation.date);
@@ -1600,19 +1643,31 @@ async function renderAdminCertificateTable() {
             <td>${cert.donationDate}</td>
             <td>${new Date(cert.generatedAt).toLocaleDateString()}</td>
             <td>
-                <button class="delete-btn" onclick="deleteCertificate(${cert.id})">Delete</button>
+                <button class="delete-btn" onclick="deleteCertificate('${String(cert.id || '').replace(/'/g, "\\'")}')">Delete</button>
             </td>
         </tr>
     `).join('');
 }
 
 window.deleteCertificate = async function(id) {
+    if (!id) return;
     if (confirm('Are you sure you want to delete this certificate?')) {
-        await API.deleteCertificate(id);
-        let certificates = getCertificates().filter(c => c.id !== id);
-        saveCertificates(certificates);
-        renderAdminCertificateTable();
-        updateStats();
+        try {
+            const res = await API.deleteCertificate(id);
+            if (res.ok || res.success) {
+                let certificates = getCertificates().filter(c => String(c.id) !== String(id));
+                saveCertificates(certificates);
+                renderAdminCertificateTable();
+                updateStats();
+            } else {
+                console.error('Delete certificate failed:', res);
+                alert(`Failed to delete certificate: ${res.message || res.error || 'Server error'}`);
+                renderAdminCertificateTable();
+            }
+        } catch (err) {
+            console.error('Error deleting certificate:', err);
+            alert(`Error deleting certificate: ${err.message}`);
+        }
     }
 };
 

@@ -199,9 +199,26 @@ app.delete(['/:id', '/api/donations/:id', '/donations/:id'], requireAdminAuth, a
             return res.status(400).json({ success: false, message: 'Invalid donation ID' });
         }
 
+        const idStr = String(rawId).trim();
+
         if (isConfigured()) {
             const sql = getSql();
-            const deleted = await sql`DELETE FROM donations WHERE id::text = ${String(rawId)} OR number = ${String(rawId)} RETURNING id;`;
+
+            // Detach any certificates tied to this donation ID
+            try {
+                await sql`UPDATE certificates SET donation_id = NULL WHERE donation_id::text = ${idStr} OR donation_number = ${idStr};`;
+            } catch (certErr) {
+                console.warn('Non-fatal: failed to unlink certificate for donation:', certErr.message);
+            }
+
+            const deleted = await sql`
+                DELETE FROM donations 
+                WHERE id::text = ${idStr} 
+                   OR number = ${idStr} 
+                   OR id::text = ${String(rawId)} 
+                   OR number = ${String(rawId)} 
+                RETURNING id;
+            `;
 
             if (deleted.length === 0) {
                 return res.status(404).json({ success: false, message: 'Donation record not found in database' });
