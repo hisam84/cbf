@@ -63,7 +63,7 @@ export default function HomePage() {
 
   return (
     <>
-      {/* HERO SECTION */}
+      {/* 1. HERO SECTION */}
       <section className="hero" id="home">
         <div className="hero-content">
           <div className="hero-badge">স্বেচ্ছায় রক্তদান, বাঁচাও প্রাণ</div>
@@ -125,135 +125,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* QUICK BLOOD SEARCH CTA */}
-      <section style={{ padding: '30px 20px', background: '#DC2626', color: '#fff' }}>
-        <div
-          className="container"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '20px',
-          }}
-        >
-          <div>
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>জরুরি রক্তের প্রয়োজন?</h3>
-            <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
-              আমাদের ডেটাবেসে সকল রক্তের গ্রুপের নিবন্ধিত রক্তদাতা রয়েছে।
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <a
-              href="tel:+8801757831838"
-              style={{
-                background: '#fff',
-                color: '#DC2626',
-                padding: '10px 20px',
-                borderRadius: '30px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-              }}
-            >
-              <Phone size={18} />
-              ০১৭৫৭-৮৩১৮৩৮
-            </a>
-            <Link
-              href="/donors"
-              style={{
-                background: 'rgba(0,0,0,0.25)',
-                color: '#fff',
-                padding: '10px 20px',
-                borderRadius: '30px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.4)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              তালিকা দেখুন <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* QUICK BLOOD GROUP DIRECTORY */}
-      <section style={{ padding: '40px 20px', background: '#ffffff' }}>
-        <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '1.35rem', color: '#1f2937', fontWeight: 800 }}>
-              গ্রুপ অনুযায়ী রক্তদাতা খুঁজুন
-            </h3>
-            <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
-              নিচের যে কোনো গ্রুপের বাটনে ক্লিক করে সরাসরি রক্তদাতাদের ফোন নম্বর ও ঠিকানা দেখুন
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-              gap: '12px',
-              maxWidth: '900px',
-              margin: '0 auto',
-            }}
-          >
-            {VALID_BLOOD_GROUPS.map((bg) => {
-              const count = stats.bloodGroupBreakdown?.[bg] || 0;
-              return (
-                <Link
-                  key={bg}
-                  href={`/donors?bloodGroup=${encodeURIComponent(bg)}`}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '16px 10px',
-                    background: '#fef2f2',
-                    border: '2px solid #fecaca',
-                    borderRadius: '16px',
-                    textDecoration: 'none',
-                    transition: 'var(--transition)',
-                    color: '#991B1B',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(220,38,38,0.2)';
-                    e.currentTarget.style.borderColor = '#DC2626';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.borderColor = '#fecaca';
-                  }}
-                >
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#DC2626' }}>{bg}</span>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
-                    {count > 0 ? `${toBengali(count)} জন দাতা` : 'দাতা খুঁজুন'}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* BLOOD COMPATIBILITY MATRIX SECTION */}
-      <section className="section section-alt" id="compatibility">
-        <div className="container">
-          <BloodCompatibilityMatrix />
-        </div>
-      </section>
-
-      {/* RECENT DONATIONS SLIDER */}
-      <section className="section" id="recentDonations">
+      {/* 2. RECENT DONATIONS SLIDER (PLACED DIRECTLY BELOW HERO SECTION) */}
+      <section className="section" id="recentDonations" style={{ background: '#f8fafc' }}>
         <div className="container">
           <div className="section-title">
             <h2>সাম্প্রতিক রক্তদান</h2>
@@ -398,8 +271,135 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* WHY DONATE SECTION */}
-      <section className="section section-alt">
+      {/* 3. QUICK BLOOD SEARCH CTA */}
+      <section style={{ padding: '30px 20px', background: '#DC2626', color: '#fff' }}>
+        <div
+          className="container"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '20px',
+          }}
+        >
+          <div>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>জরুরি রক্তের প্রয়োজন?</h3>
+            <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
+              আমাদের ডেটাবেসে সকল রক্তের গ্রুপের নিবন্ধিত রক্তদাতা রয়েছে।
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <a
+              href="tel:+8801757831838"
+              style={{
+                background: '#fff',
+                color: '#DC2626',
+                padding: '10px 20px',
+                borderRadius: '30px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+              }}
+            >
+              <Phone size={18} />
+              ০১৭৫৭-৮৩১৮৩৮
+            </a>
+            <Link
+              href="/donors"
+              style={{
+                background: 'rgba(0,0,0,0.25)',
+                color: '#fff',
+                padding: '10px 20px',
+                borderRadius: '30px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                border: '1px solid rgba(255,255,255,0.4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              তালিকা দেখুন <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. QUICK BLOOD GROUP DIRECTORY */}
+      <section style={{ padding: '40px 20px', background: '#ffffff' }}>
+        <div className="container">
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '1.35rem', color: '#1f2937', fontWeight: 800 }}>
+              গ্রুপ অনুযায়ী রক্তদাতা খুঁজুন
+            </h3>
+            <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+              নিচের যে কোনো গ্রুপের বাটনে ক্লিক করে সরাসরি রক্তদাতাদের ফোন নম্বর ও ঠিকানা দেখুন
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+              gap: '12px',
+              maxWidth: '900px',
+              margin: '0 auto',
+            }}
+          >
+            {VALID_BLOOD_GROUPS.map((bg) => {
+              const count = stats.bloodGroupBreakdown?.[bg] || 0;
+              return (
+                <Link
+                  key={bg}
+                  href={`/donors?bloodGroup=${encodeURIComponent(bg)}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px 10px',
+                    background: '#fef2f2',
+                    border: '2px solid #fecaca',
+                    borderRadius: '16px',
+                    textDecoration: 'none',
+                    transition: 'var(--transition)',
+                    color: '#991B1B',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(220,38,38,0.2)';
+                    e.currentTarget.style.borderColor = '#DC2626';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = '#fecaca';
+                  }}
+                >
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#DC2626' }}>{bg}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                    {count > 0 ? `${toBengali(count)} জন দাতা` : 'দাতা খুঁজুন'}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. BLOOD COMPATIBILITY MATRIX SECTION */}
+      <section className="section section-alt" id="compatibility">
+        <div className="container">
+          <BloodCompatibilityMatrix />
+        </div>
+      </section>
+
+      {/* 6. WHY DONATE SECTION */}
+      <section className="section">
         <div className="container">
           <div className="section-title">
             <h2>কেন রক্তদান করবেন?</h2>
