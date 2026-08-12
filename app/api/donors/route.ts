@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isConfigured, getSql, ensureTablesExist } from '@/lib/db';
+import { verifyAdminRequest } from '@/lib/auth';
 import { validateBloodGroup, normalizePhone, sanitizeText } from '@/lib/validators';
 import { ApiResponse, Donor, DonorInput } from '@/lib/types';
 
 export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Donor[]>>> {
   try {
     await ensureTablesExist();
+    const auth = verifyAdminRequest(req);
+    const isAdmin = auth.authenticated;
+
     const { searchParams } = new URL(req.url);
     const bloodGroup = searchParams.get('bloodGroup');
     const q = searchParams.get('q');
@@ -58,11 +62,17 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Do
         `;
       }
 
+      // Hide mobile numbers for public visitors; only reveal to logged-in admin
+      const safeDonors = donors.map((d) => ({
+        ...d,
+        mobile: isAdmin ? d.mobile : '',
+      }));
+
       return NextResponse.json({
         success: true,
         source: 'neon_postgres',
-        count: donors.length,
-        data: donors as Donor[],
+        count: safeDonors.length,
+        data: safeDonors as Donor[],
       });
     }
 

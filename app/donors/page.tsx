@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Donor, BloodGroupFilter, ALL_BLOOD_GROUP_FILTERS } from '@/lib/types';
 import { calculateEligibility } from '@/lib/validators';
 import { toBengali } from '@/lib/image-compress';
-import { Search, Phone, MapPin, Calendar, Copy, Check, X, Droplet } from 'lucide-react';
+import { MapPin, Calendar, X, Droplet } from 'lucide-react';
 
 function DonorsContent() {
   const searchParams = useSearchParams();
@@ -16,7 +16,6 @@ function DonorsContent() {
   const [selectedGroup, setSelectedGroup] = useState<BloodGroupFilter>(initialBloodGroup);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [copiedId, setCopiedId] = useState<string | number | null>(null);
 
   useEffect(() => {
     fetchDonors(selectedGroup, searchQuery);
@@ -44,21 +43,13 @@ function DonorsContent() {
     }
   };
 
-  const handleCopyPhone = (donor: Donor) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(donor.mobile);
-      setCopiedId(donor.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    }
-  };
-
   return (
     <section className="section section-alt" id="donors" style={{ paddingTop: '40px' }}>
       <div className="container">
         <div className="section-title">
           <h2>রক্তদাতা তালিকা</h2>
           <div className="underline"></div>
-          <p>চাঁভালি রক্ত ফাউন্ডেশনের নিবন্ধিত স্বেচ্ছাসেবী রক্তদাতাদের তালিকা ও মোবাইল নম্বর</p>
+          <p>চাঁভালি রক্ত ফাউন্ডেশনের নিবন্ধিত স্বেচ্ছাসেবী রক্তদাতাদের তালিকা</p>
         </div>
 
         {/* SEARCH & FILTER CONTROLS */}
@@ -66,7 +57,7 @@ function DonorsContent() {
           <div style={{ position: 'relative', marginBottom: '20px' }}>
             <input
               type="text"
-              placeholder="নাম, এলাকা, থানা বা মোবাইল নম্বর দিয়ে খুঁজুন..."
+              placeholder="নাম, এলাকা বা থানা দিয়ে খুঁজুন..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -142,10 +133,6 @@ function DonorsContent() {
                     <div className="donor-card-header">
                       <div>
                         <div className="donor-name">{donor.name}</div>
-                        <div className="donor-phone" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Phone size={14} color="#6b7280" />
-                          <a href={`tel:${donor.mobile}`}>{donor.mobile}</a>
-                        </div>
                       </div>
                       <span className="donor-blood">{donor.bloodGroup}</span>
                     </div>
@@ -177,64 +164,6 @@ function DonorsContent() {
                           {eligibility.statusTextBengali}
                         </span>
                       </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <a
-                        href={`tel:${donor.mobile}`}
-                        style={{
-                          flex: 1,
-                          minWidth: '120px',
-                          textAlign: 'center',
-                          padding: '8px 12px',
-                          background: '#DC2626',
-                          color: '#fff',
-                          borderRadius: '8px',
-                          textDecoration: 'none',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <Phone size={14} />
-                        কল করুন
-                      </a>
-
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPhone(donor)}
-                        style={{
-                          padding: '8px 14px',
-                          background: copiedId === donor.id ? '#166534' : '#f3f4f6',
-                          color: copiedId === donor.id ? '#ffffff' : '#374151',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          fontSize: '0.85rem',
-                          transition: 'all 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                        title="নম্বর কপি করুন"
-                      >
-                        {copiedId === donor.id ? (
-                          <>
-                            <Check size={14} />
-                            কপি হয়েছে
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={14} />
-                            কপি
-                          </>
-                        )}
-                      </button>
                     </div>
                   </div>
                 );
