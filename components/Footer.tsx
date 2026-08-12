@@ -47,19 +47,19 @@ export default function Footer() {
 
         <div className="footer-contact">
           <h4>যোগাযোগ ও হটলাইন</h4>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <p>
             <Phone size={16} />
             <a href="tel:+8801757831838">+880 1757-831838</a>
           </p>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <p>
             <Phone size={16} />
             <a href="tel:+8801785466153">+880 1785-466153</a>
           </p>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <p>
             <Mail size={16} />
             <a href="mailto:chavalibloodfoundation@gmail.com">chavalibloodfoundation@gmail.com</a>
           </p>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <p>
             <MapPin size={16} />
             <span>চাঁপাইনবাবগঞ্জ সদর, চাঁপাইনবাবগঞ্জ</span>
           </p>
@@ -70,6 +70,21 @@ export default function Footer() {
         <p style={{ fontWeight: 600 }}>রক্তের বন্ধনে, চাঁভালি সবখানে</p>
         <p style={{ marginTop: '6px', fontSize: '0.85rem' }}>
           © {currentYear} Chavali Blood Foundation | সর্বস্বত্ব সংরক্ষিত
+        </p>
+        <p style={{ marginTop: '6px', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+          Developed by:{' '}
+          <a
+            href="https://hisam-omega.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#ffffff',
+              fontWeight: 700,
+              textDecoration: 'underline',
+            }}
+          >
+            Hisam Uddin
+          </a>
         </p>
       </div>
     </footer>

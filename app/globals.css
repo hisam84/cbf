@@ -906,9 +906,28 @@ body {
 }
 
 .footer-contact p {
-    color: rgba(255,255,255,0.6);
+    color: rgba(255,255,255,0.85);
     font-size: 0.9rem;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-contact a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.footer-contact a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.footer-contact svg {
+    color: #ef4444;
+    flex-shrink: 0;
 }
 
 .footer-bottom {
@@ -917,8 +936,19 @@ body {
     border-top: 1px solid rgba(255,255,255,0.1);
     padding-top: 20px;
     text-align: center;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.6);
     font-size: 0.85rem;
+}
+
+.footer-bottom a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.footer-bottom a:hover {
+    color: #ffffff;
+    text-decoration: underline;
 }
 
 /* ==================== DONATION SLIDER ==================== */
