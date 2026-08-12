@@ -23,13 +23,13 @@ function isConfigured() {
 
 async function runTest() {
   console.log('============================================================');
-  console.log('⚡ Chavali Blood Foundation - Neon DB Diagnostic Tool');
+  console.log('[DIAGNOSTIC] Chavali Blood Foundation - Neon DB Test');
   console.log('============================================================\n');
 
   if (!isConfigured()) {
-    console.log(' Status:       🟡 NOT CONFIGURED YET');
+    console.log(' Status:       [NOT CONFIGURED]');
     console.log(' Message:      DATABASE_URL is not configured in .env file');
-    console.log('\n📋 Quick Setup Guide:');
+    console.log('\nQuick Setup Guide:');
     console.log('  1. Sign in to https://console.neon.tech');
     console.log('  2. Create a new PostgreSQL project named "chavali-blood-foundation"');
     console.log('  3. Copy your Connection String from the Neon dashboard');
@@ -52,7 +52,7 @@ async function runTest() {
     `;
     const latencyMs = Date.now() - startTime;
 
-    console.log(' Status:       🟢 CONNECTED TO NEON POSTGRESQL');
+    console.log(' Status:       [CONNECTED TO NEON POSTGRESQL]');
     console.log(` Latency:      ${latencyMs} ms`);
     console.log(` Version:      ${result[0]?.version?.split('on')[0] || result[0]?.version}`);
     console.log(` Timestamp:    ${result[0]?.current_time}`);
@@ -63,11 +63,11 @@ async function runTest() {
           : 'None (Run npm run db:init to create)'
       }`
     );
-    console.log('\n✅ Your Neon database connection is active and ready for production.');
+    console.log('\n[SUCCESS] Neon database connection is active and ready for production.');
   } catch (err) {
-    console.log(' Status:       🔴 CONNECTION FAILED');
+    console.log(' Status:       [CONNECTION FAILED]');
     console.log(` Error:        ${err.message}`);
-    console.log('\n💡 Please check that your DATABASE_URL in .env has the correct username, password, and host.');
+    console.log('\nPlease check that your DATABASE_URL in .env has the correct username, password, and host.');
   }
   console.log('\n============================================================');
 }

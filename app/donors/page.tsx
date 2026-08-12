@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Donor, BloodGroupFilter, ALL_BLOOD_GROUP_FILTERS } from '@/lib/types';
 import { calculateEligibility } from '@/lib/validators';
 import { toBengali } from '@/lib/image-compress';
+import { Search, Phone, MapPin, Calendar, Copy, Check, X, Droplet } from 'lucide-react';
 
 function DonorsContent() {
   const searchParams = useSearchParams();
@@ -65,12 +66,12 @@ function DonorsContent() {
           <div style={{ position: 'relative', marginBottom: '20px' }}>
             <input
               type="text"
-              placeholder="🔍 নাম, এলাকা, থানা বা মোবাইল নম্বর দিয়ে খুঁজুন..."
+              placeholder="নাম, এলাকা, থানা বা মোবাইল নম্বর দিয়ে খুঁজুন..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: '100%',
-                padding: '14px 20px',
+                padding: '14px 44px 14px 20px',
                 fontSize: '1rem',
                 borderRadius: '30px',
                 border: '2px solid #e5e7eb',
@@ -94,11 +95,13 @@ function DonorsContent() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '1rem',
                   color: '#9ca3af',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
+                aria-label="মুছে ফেলুন"
               >
-                ✕
+                <X size={18} />
               </button>
             )}
           </div>
@@ -121,7 +124,7 @@ function DonorsContent() {
         {/* DONOR RESULTS GRID */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <p style={{ fontSize: '1.2rem', color: '#DC2626' }}>⏳ রক্তদাতা তালিকা লোড হচ্ছে...</p>
+            <p style={{ fontSize: '1.2rem', color: '#DC2626' }}>রক্তদাতা তালিকা লোড হচ্ছে...</p>
           </div>
         ) : donors.length > 0 ? (
           <>
@@ -139,19 +142,22 @@ function DonorsContent() {
                     <div className="donor-card-header">
                       <div>
                         <div className="donor-name">{donor.name}</div>
-                        <div className="donor-phone">
-                          📞 <a href={`tel:${donor.mobile}`}>{donor.mobile}</a>
+                        <div className="donor-phone" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Phone size={14} color="#6b7280" />
+                          <a href={`tel:${donor.mobile}`}>{donor.mobile}</a>
                         </div>
                       </div>
                       <span className="donor-blood">{donor.bloodGroup}</span>
                     </div>
 
                     <div className="donor-details">
-                      <p>
-                        📍 <strong>ঠিকানা:</strong> {donor.address}
+                      <p style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MapPin size={14} color="#6b7280" />
+                        <span><strong>ঠিকানা:</strong> {donor.address}</span>
                       </p>
-                      <p>
-                        📅 <strong>সর্বশেষ রক্তদান:</strong> {donor.lastDonation || 'তথ্য নেই'}
+                      <p style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calendar size={14} color="#6b7280" />
+                        <span><strong>সর্বশেষ রক্তদান:</strong> {donor.lastDonation || 'তথ্য নেই'}</span>
                       </p>
 
                       {/* Eligibility Status Badge */}
@@ -194,7 +200,8 @@ function DonorsContent() {
                           gap: '6px',
                         }}
                       >
-                        📞 কল করুন
+                        <Phone size={14} />
+                        কল করুন
                       </a>
 
                       <button
@@ -210,10 +217,23 @@ function DonorsContent() {
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           transition: 'all 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
                         }}
                         title="নম্বর কপি করুন"
                       >
-                        {copiedId === donor.id ? '✓ কপি হয়েছে' : '📋 কপি'}
+                        {copiedId === donor.id ? (
+                          <>
+                            <Check size={14} />
+                            কপি হয়েছে
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            কপি
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -233,7 +253,9 @@ function DonorsContent() {
               margin: '0 auto',
             }}
           >
-            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🩸</div>
+            <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '12px' }}>
+              <Droplet size={36} />
+            </div>
             <h3 style={{ color: '#374151', marginBottom: '8px' }}>কোনো রক্তদাতা পাওয়া যায়নি</h3>
             <p style={{ color: '#6b7280', marginBottom: '20px' }}>
               {selectedGroup !== 'all'
@@ -255,7 +277,7 @@ export default function DonorsPage() {
     <Suspense
       fallback={
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <p style={{ color: '#DC2626', fontSize: '1.2rem' }}>⏳ পেজ লোড হচ্ছে...</p>
+          <p style={{ color: '#DC2626', fontSize: '1.2rem' }}>পেজ লোড হচ্ছে...</p>
         </div>
       }
     >

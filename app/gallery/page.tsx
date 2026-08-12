@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { GalleryItem } from '@/lib/types';
 import { toBengali } from '@/lib/image-compress';
+import { X, Image as ImageIcon } from 'lucide-react';
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryItem[]>([]);
@@ -71,7 +72,7 @@ export default function GalleryPage() {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <p style={{ fontSize: '1.2rem', color: '#DC2626' }}>⏳ গ্যালারি লোড হচ্ছে...</p>
+            <p style={{ fontSize: '1.2rem', color: '#DC2626' }}>গ্যালারি লোড হচ্ছে...</p>
           </div>
         ) : filteredImages.length > 0 ? (
           <div className="gallery-grid" id="galleryGrid">
@@ -108,6 +109,9 @@ export default function GalleryPage() {
               boxShadow: 'var(--shadow)',
             }}
           >
+            <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '12px' }}>
+              <ImageIcon size={36} />
+            </div>
             <p style={{ fontSize: '1.1rem', color: '#6b7280' }}>এখনও কোনো ছবি আপলোড করা হয়নি।</p>
           </div>
         )}
@@ -126,8 +130,9 @@ export default function GalleryPage() {
             onClick={() => setLightboxImg(null)}
             type="button"
             aria-label="বন্ধ করুন"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            ✕
+            <X size={24} />
           </button>
           <img src={lightboxImg} alt="Enlarged gallery photo" />
         </div>

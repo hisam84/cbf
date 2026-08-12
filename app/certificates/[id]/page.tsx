@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { Certificate } from '@/lib/types';
+import { Download, Printer, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -54,7 +55,7 @@ export default function PublicCertificatePage({ params }: PageProps) {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 20px', minHeight: '60vh' }}>
-        <p style={{ fontSize: '1.3rem', color: '#DC2626' }}>⏳ প্রশংসাপত্র লোড হচ্ছে...</p>
+        <p style={{ fontSize: '1.3rem', color: '#DC2626' }}>প্রশংসাপত্র লোড হচ্ছে...</p>
       </div>
     );
   }
@@ -62,12 +63,19 @@ export default function PublicCertificatePage({ params }: PageProps) {
   if (error || !certificate) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 20px', minHeight: '60vh' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⚠️</div>
+        <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#991B1B', marginBottom: '16px' }}>
+          <AlertCircle size={36} />
+        </div>
         <h2 style={{ color: '#991B1B' }}>প্রশংসাপত্র পাওয়া যায়নি</h2>
         <p style={{ color: '#6b7280', margin: '10px 0 20px 0' }}>
           অনুরোধকৃত প্রশংসাপত্রটি ডেটাবেসে উপস্থিত নেই অথবা মেয়াদোত্তীর্ণ হয়েছে।
         </p>
-        <Link href="/" className="hero-btn" style={{ display: 'inline-block' }}>
+        <Link
+          href="/"
+          className="hero-btn"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          <ArrowLeft size={16} />
           হোমপেজে ফিরে যান
         </Link>
       </div>
@@ -204,17 +212,19 @@ export default function PublicCertificatePage({ params }: PageProps) {
             type="button"
             className="submit-btn"
             disabled={downloading}
-            style={{ background: '#2563eb' }}
+            style={{ background: '#2563eb', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
-            {downloading ? 'ডাউনলোড প্রস্তুত হচ্ছে...' : '📥 প্রশংসাপত্র ডাউনলোড (PNG)'}
+            <Download size={18} />
+            {downloading ? 'ডাউনলোড প্রস্তুত হচ্ছে...' : 'প্রশংসাপত্র ডাউনলোড (PNG)'}
           </button>
           <button
             onClick={() => window.print()}
             type="button"
             className="submit-btn"
-            style={{ background: '#10b981' }}
+            style={{ background: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
-            🖨️ প্রিন্ট করুন
+            <Printer size={18} />
+            প্রিন্ট করুন
           </button>
         </div>
       </div>

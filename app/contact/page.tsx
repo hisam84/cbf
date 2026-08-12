@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Phone, MapPin, Mail, Send, Check, AlertCircle, Globe } from 'lucide-react';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -63,7 +64,9 @@ export default function ContactPage() {
         <div className="contact-grid">
           <div className="contact-info">
             <div className="contact-item">
-              <div className="contact-icon">📞</div>
+              <div className="contact-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Phone size={24} color="#DC2626" />
+              </div>
               <div className="contact-detail">
                 <h4>জরুরি হটলাইন নম্বর</h4>
                 <p>
@@ -76,7 +79,9 @@ export default function ContactPage() {
             </div>
 
             <div className="contact-item">
-              <div className="contact-icon">📘</div>
+              <div className="contact-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Globe size={24} color="#DC2626" />
+              </div>
               <div className="contact-detail">
                 <h4>অফিসিয়াল ফেসবুক পেজ</h4>
                 <a
@@ -90,7 +95,9 @@ export default function ContactPage() {
             </div>
 
             <div className="contact-item">
-              <div className="contact-icon">📍</div>
+              <div className="contact-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MapPin size={24} color="#DC2626" />
+              </div>
               <div className="contact-detail">
                 <h4>প্রধান কার্যালয়</h4>
                 <p>চাঁভালি, চাঁপাইনবাবগঞ্জ সদর, চাঁপাইনবাবগঞ্জ।</p>
@@ -98,7 +105,9 @@ export default function ContactPage() {
             </div>
 
             <div className="contact-item">
-              <div className="contact-icon">✉️</div>
+              <div className="contact-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Mail size={24} color="#DC2626" />
+              </div>
               <div className="contact-detail">
                 <h4>অফিসিয়াল ইমেইল</h4>
                 <a href="mailto:chavalibloodfoundation@gmail.com">chavalibloodfoundation@gmail.com</a>
@@ -152,9 +161,13 @@ export default function ContactPage() {
                 color: status.success ? '#166534' : '#991b1b',
                 border: `1px solid ${status.success ? '#bbf7d0' : '#fecaca'}`,
                 fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              {status.success ? '✓ ' : '⚠️ '} {status.message}
+              {status.success ? <Check size={18} /> : <AlertCircle size={18} />}
+              <span>{status.message}</span>
             </div>
           )}
 
@@ -219,9 +232,10 @@ export default function ContactPage() {
               type="submit"
               className="submit-btn"
               disabled={status.loading}
-              style={{ marginTop: '16px', width: '100%' }}
+              style={{ marginTop: '16px', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              {status.loading ? 'বার্তা পাঠানো হচ্ছে...' : 'বার্তা পাঠান ✉️'}
+              <Send size={16} />
+              <span>{status.loading ? 'বার্তা পাঠানো হচ্ছে...' : 'বার্তা পাঠান'}</span>
             </button>
           </form>
         </div>

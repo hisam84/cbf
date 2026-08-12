@@ -60,7 +60,7 @@ export function calculateEligibility(lastDonationDateStr?: string | null): {
       daysUntilEligible: 0,
       daysSinceLastDonation: null,
       nextEligibleDate: null,
-      statusTextBengali: 'রক্তদানের জন্য প্রস্তুত 🩸',
+      statusTextBengali: 'রক্তদানের জন্য প্রস্তুত',
     };
   }
 
@@ -71,7 +71,7 @@ export function calculateEligibility(lastDonationDateStr?: string | null): {
       daysUntilEligible: 0,
       daysSinceLastDonation: null,
       nextEligibleDate: null,
-      statusTextBengali: 'রক্তদানের জন্য প্রস্তুত 🩸',
+      statusTextBengali: 'রক্তদানের জন্য প্রস্তুত',
     };
   }
 
@@ -87,7 +87,7 @@ export function calculateEligibility(lastDonationDateStr?: string | null): {
       daysUntilEligible: 0,
       daysSinceLastDonation: daysSince,
       nextEligibleDate: null,
-      statusTextBengali: 'রক্তদানের জন্য প্রস্তুত 🩸',
+      statusTextBengali: 'রক্তদানের জন্য প্রস্তুত',
     };
   } else {
     const daysRemaining = MIN_DAYS_BETWEEN_DONATIONS - daysSince;

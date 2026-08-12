@@ -30,11 +30,11 @@ async function hashPassword(plainPassword) {
 
 async function initDatabase() {
   console.log('------------------------------------------------------------');
-  console.log('🩸 Chavali Blood Foundation - Neon Database Initialization');
+  console.log('Chavali Blood Foundation - Neon Database Initialization');
   console.log('------------------------------------------------------------');
 
   if (!isConfigured()) {
-    console.error('❌ Error: DATABASE_URL is not configured in your .env file.');
+    console.error('[ERROR] DATABASE_URL is not configured in your .env file.');
     console.error('Please create a free Neon database at https://console.neon.tech and paste your connection string in .env:');
     console.error('DATABASE_URL=postgresql://user:password@endpoint.neon.tech/neondb?sslmode=require\n');
     process.exit(1);
@@ -43,12 +43,12 @@ async function initDatabase() {
   const sql = neon(getDatabaseUrl());
 
   try {
-    console.log('⏳ Connecting to Neon PostgreSQL...');
+    console.log('Connecting to Neon PostgreSQL...');
     const [ping] = await sql`SELECT current_database() as db_name, version() as pg_version;`;
-    console.log(`✅ Connected successfully to: ${ping.db_name}`);
-    console.log(`📦 PostgreSQL Version: ${ping.pg_version.split(',')[0]}\n`);
+    console.log(`Connected successfully to: ${ping.db_name}`);
+    console.log(`PostgreSQL Version: ${ping.pg_version.split(',')[0]}\n`);
 
-    console.log('🔨 Creating tables & indexes...');
+    console.log('Creating tables & indexes...');
 
     // 1. Admins Table
     await sql`
@@ -60,7 +60,7 @@ async function initDatabase() {
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
     `;
-    console.log('  ✓ Table created: admins');
+    console.log('  - Table created: admins');
 
     // 2. Donors Table
     await sql`
@@ -80,7 +80,7 @@ async function initDatabase() {
     await sql`CREATE INDEX IF NOT EXISTS idx_donors_blood_group ON donors(blood_group);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_donors_mobile ON donors(mobile);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_donors_registered_at ON donors(registered_at DESC);`;
-    console.log('  ✓ Table & Indexes created: donors');
+    console.log('  - Table & Indexes created: donors');
 
     // 3. Donations Table
     await sql`
@@ -102,7 +102,7 @@ async function initDatabase() {
     await sql`CREATE INDEX IF NOT EXISTS idx_donations_blood ON donations(blood_group);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_donations_date ON donations(date DESC);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_donations_added_at ON donations(added_at DESC);`;
-    console.log('  ✓ Table & Indexes created: donations');
+    console.log('  - Table & Indexes created: donations');
 
     // 4. Gallery Table
     await sql`
@@ -115,7 +115,7 @@ async function initDatabase() {
       );
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_gallery_uploaded_at ON gallery(uploaded_at DESC);`;
-    console.log('  ✓ Table & Indexes created: gallery');
+    console.log('  - Table & Indexes created: gallery');
 
     // 5. Certificates Table
     await sql`
@@ -134,7 +134,7 @@ async function initDatabase() {
       );
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_certificates_generated_at ON certificates(generated_at DESC);`;
-    console.log('  ✓ Table & Indexes created: certificates');
+    console.log('  - Table & Indexes created: certificates');
 
     // 6. Contact Messages Table
     await sql`
@@ -150,7 +150,7 @@ async function initDatabase() {
       );
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_contact_created_at ON contact_messages(created_at DESC);`;
-    console.log('  ✓ Table & Indexes created: contact_messages');
+    console.log('  - Table & Indexes created: contact_messages');
 
     // Seed default Admin user if none exists
     const adminUsername = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
@@ -163,15 +163,15 @@ async function initDatabase() {
         INSERT INTO admins (username, password_hash)
         VALUES (${adminUsername}, ${passwordHash});
       `;
-      console.log(`\n👑 Initial admin created: "${adminUsername}" with password "${adminPassword}"`);
+      console.log(`\nInitial admin created: "${adminUsername}" with password "${adminPassword}"`);
     } else {
-      console.log(`\n👑 Admin user "${adminUsername}" already exists.`);
+      console.log(`\nAdmin user "${adminUsername}" already exists.`);
     }
 
-    console.log('\n✨ Database initialization completed successfully!');
+    console.log('\nDatabase initialization completed successfully!');
     console.log('------------------------------------------------------------\n');
   } catch (err) {
-    console.error('❌ Database initialization failed:', err.message);
+    console.error('[ERROR] Database initialization failed:', err.message);
     process.exit(1);
   }
 }

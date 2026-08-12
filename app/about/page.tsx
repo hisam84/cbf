@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ShieldCheck, Search, Users, Clock, ArrowRight } from 'lucide-react';
 
 export default function AboutPage() {
   return (
@@ -23,26 +24,39 @@ export default function AboutPage() {
 
             <div className="about-features" style={{ marginTop: '30px' }}>
               <div className="about-feature">
-                <div className="about-feature-icon">🛡️</div>
+                <div className="about-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={28} color="#DC2626" />
+                </div>
                 <div className="about-feature-text">নিরাপদ রক্ত সংগ্রহ</div>
               </div>
               <div className="about-feature">
-                <div className="about-feature-icon">🔍</div>
+                <div className="about-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Search size={28} color="#DC2626" />
+                </div>
                 <div className="about-feature-text">দ্রুত রক্তদাতা খোঁজা</div>
               </div>
               <div className="about-feature">
-                <div className="about-feature-icon">🤝</div>
+                <div className="about-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={28} color="#DC2626" />
+                </div>
                 <div className="about-feature-text">স্বেচ্ছাসেবী সংগঠন</div>
               </div>
               <div className="about-feature">
-                <div className="about-feature-icon">⏰</div>
+                <div className="about-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={28} color="#DC2626" />
+                </div>
                 <div className="about-feature-text">২৪/৭ জরুরি সেবা</div>
               </div>
             </div>
 
             <div style={{ marginTop: '35px' }}>
-              <Link href="/register" className="hero-btn" style={{ display: 'inline-block' }}>
-                রক্তদাতা হিসেবে যুক্ত হোন →
+              <Link
+                href="/register"
+                className="hero-btn"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span>রক্তদাতা হিসেবে যুক্ত হোন</span>
+                <ArrowRight size={18} />
               </Link>
             </div>
           </div>

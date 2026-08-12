@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { toBengali } from '@/lib/image-compress';
 import { Donation, StatsData, VALID_BLOOD_GROUPS } from '@/lib/types';
 import BloodCompatibilityMatrix from '@/components/BloodCompatibilityMatrix';
+import { Heart, Activity, Users, Phone, MapPin, Calendar, Search, X, Droplet, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   const [stats, setStats] = useState<StatsData>({
@@ -64,12 +65,6 @@ export default function HomePage() {
     <>
       {/* HERO SECTION */}
       <section className="hero" id="home">
-        <div className="blood-drop"></div>
-        <div className="blood-drop"></div>
-        <div className="blood-drop"></div>
-        <div className="blood-drop"></div>
-        <div className="blood-drop"></div>
-
         <div className="hero-content">
           <div className="hero-badge">স্বেচ্ছায় রক্তদান, বাঁচাও প্রাণ</div>
           <h1>চাঁভালি রক্ত ফাউন্ডেশন</h1>
@@ -84,8 +79,13 @@ export default function HomePage() {
               marginTop: '20px',
             }}
           >
-            <Link href="/register" className="hero-btn">
-              রক্তদান করতে চাই 🩸
+            <Link
+              href="/register"
+              className="hero-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Droplet size={18} fill="currentColor" />
+              রক্তদান করতে চাই
             </Link>
             <Link
               href="/donors"
@@ -94,9 +94,13 @@ export default function HomePage() {
                 background: 'rgba(255,255,255,0.15)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255,255,255,0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              রক্তদাতা খুঁজুন 🔍
+              <Search size={18} />
+              রক্তদাতা খুঁজুন
             </Link>
           </div>
 
@@ -149,13 +153,14 @@ export default function HomePage() {
                 borderRadius: '30px',
                 fontWeight: 700,
                 textDecoration: 'none',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
               }}
             >
-              📞 ০১৭৫৭-৮৩১৮৩৮
+              <Phone size={18} />
+              ০১৭৫৭-৮৩১৮৩৮
             </a>
             <Link
               href="/donors"
@@ -167,9 +172,12 @@ export default function HomePage() {
                 fontWeight: 600,
                 textDecoration: 'none',
                 border: '1px solid rgba(255,255,255,0.4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
-              তালিকা দেখুন →
+              তালিকা দেখুন <ArrowRight size={16} />
             </Link>
           </div>
         </div>
@@ -255,7 +263,7 @@ export default function HomePage() {
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '50px 20px' }}>
-              <p style={{ color: '#DC2626', fontSize: '1.1rem' }}>⏳ রক্তদান তথ্য লোড হচ্ছে...</p>
+              <p style={{ color: '#DC2626', fontSize: '1.1rem' }}>রক্তদান তথ্য লোড হচ্ছে...</p>
             </div>
           ) : donations.length > 0 ? (
             <div className="donation-slider">
@@ -291,10 +299,10 @@ export default function HomePage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '3rem',
+                            color: '#DC2626',
                           }}
                         >
-                          🩸
+                          <Droplet size={48} fill="currentColor" />
                         </div>
                       )}
                       <div className="donation-slide-content">
@@ -310,11 +318,19 @@ export default function HomePage() {
                           <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>ID: {d.number}</span>
                         </div>
                         <div className="donation-slide-title">{d.donorName}</div>
-                        <div className="donation-slide-subtitle">
-                          📍 {d.donorAddress || 'চাঁপাইনবাবগঞ্জ'}
+                        <div
+                          className="donation-slide-subtitle"
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <MapPin size={16} />
+                          <span>{d.donorAddress || 'চাঁপাইনবাবগঞ্জ'}</span>
                         </div>
-                        <div className="donation-slide-date">
-                          📅 রক্তদানের তারিখ: {d.date}
+                        <div
+                          className="donation-slide-date"
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Calendar size={16} />
+                          <span>রক্তদানের তারিখ: {d.date}</span>
                         </div>
                         {d.notes && (
                           <p
@@ -407,7 +423,9 @@ export default function HomePage() {
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>❤️</div>
+              <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '16px' }}>
+                <Heart size={32} />
+              </div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: '#DC2626' }}>
                 জীবন রক্ষা
               </h3>
@@ -425,7 +443,9 @@ export default function HomePage() {
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🩺</div>
+              <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '16px' }}>
+                <Activity size={32} />
+              </div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: '#DC2626' }}>
                 স্বাস্থ্যের সুরক্ষা
               </h3>
@@ -443,7 +463,9 @@ export default function HomePage() {
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🤝</div>
+              <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '16px' }}>
+                <Users size={32} />
+              </div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: '#DC2626' }}>
                 মানবিক তৃপ্তি
               </h3>
@@ -463,8 +485,9 @@ export default function HomePage() {
             onClick={() => setLightboxImg(null)}
             type="button"
             aria-label="বন্ধ করুন"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            ✕
+            <X size={24} />
           </button>
           <img src={lightboxImg} alt="Enlarged preview" />
         </div>

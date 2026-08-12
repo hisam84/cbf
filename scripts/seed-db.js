@@ -68,7 +68,7 @@ const sampleDonations = [
 ];
 
 async function seedDatabase() {
-  console.log('🌱 Seeding Neon database with sample records...');
+  console.log('Seeding Neon database with sample records...');
 
   const dbUrl =
     process.env.DATABASE_URL ||
@@ -77,7 +77,7 @@ async function seedDatabase() {
     process.env.POSTGRES_URL_NON_POOLING;
 
   if (!dbUrl || !dbUrl.startsWith('postgres')) {
-    console.error('❌ Error: DATABASE_URL is not set in .env');
+    console.error('[ERROR] DATABASE_URL is not set in .env');
     process.exit(1);
   }
 
@@ -95,7 +95,7 @@ async function seedDatabase() {
           VALUES (${d.name}, ${d.mobile}, ${d.blood_group}, ${d.address}, ${d.last_donation});
         `;
       }
-      console.log(`✓ Added ${sampleDonors.length} sample donors`);
+      console.log(`- Added ${sampleDonors.length} sample donors`);
     } else {
       console.log(`Donors table already contains ${donorCount.count} records. Skipping donor seed.`);
     }
@@ -110,14 +110,14 @@ async function seedDatabase() {
           VALUES (${d.donor_name}, ${d.donor_phone}, ${d.donor_address}, ${d.number}, ${d.blood_group}, ${d.date}, ${d.notes});
         `;
       }
-      console.log(`✓ Added ${sampleDonations.length} sample donations`);
+      console.log(`- Added ${sampleDonations.length} sample donations`);
     } else {
       console.log(`Donations table already contains ${donationCount.count} records. Skipping donation seed.`);
     }
 
-    console.log('\n✨ Database seeding completed successfully!\n');
+    console.log('\nDatabase seeding completed successfully!\n');
   } catch (err) {
-    console.error('❌ Seeding failed:', err.message);
+    console.error('[ERROR] Seeding failed:', err.message);
   }
 }
 

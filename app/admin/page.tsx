@@ -16,6 +16,31 @@ import {
   VALID_BLOOD_GROUPS,
 } from '@/lib/types';
 import { calculateEligibility } from '@/lib/validators';
+import {
+  Lock,
+  LogOut,
+  Globe,
+  Users,
+  FileText,
+  Award,
+  Image as ImageIcon,
+  Mail,
+  BarChart3,
+  Key,
+  Check,
+  AlertCircle,
+  Calendar,
+  MapPin,
+  Plus,
+  Edit,
+  Trash2,
+  Download,
+  Save,
+  Upload,
+  X,
+  ExternalLink,
+  Phone,
+} from 'lucide-react';
 
 type AdminTab =
   | 'adminDonors'
@@ -146,7 +171,6 @@ export default function AdminPage() {
   };
 
   const fetchAllData = async () => {
-    // Health
     fetch('/api/health')
       .then((res) => res.json())
       .then((d) => {
@@ -154,7 +178,6 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // Stats
     fetch('/api/stats')
       .then((res) => res.json())
       .then((d) => {
@@ -162,7 +185,6 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // Donors
     fetch('/api/donors')
       .then((res) => res.json())
       .then((d) => {
@@ -170,7 +192,6 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // Donations
     fetch('/api/donations')
       .then((res) => res.json())
       .then((d) => {
@@ -178,7 +199,6 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // Gallery
     fetch('/api/gallery')
       .then((res) => res.json())
       .then((d) => {
@@ -186,7 +206,6 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // Certificates
     fetch('/api/certificates', { headers: getHeaders() })
       .then((res) => res.json())
       .then((d) => {
@@ -194,7 +213,6 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // Messages
     fetch('/api/contact', { headers: getHeaders() })
       .then((res) => res.json())
       .then((d) => {
@@ -203,9 +221,6 @@ export default function AdminPage() {
       .catch(() => {});
   };
 
-  // ----------------------------------------------------------------------------
-  // Auth Handlers
-  // ----------------------------------------------------------------------------
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoadingLogin(true);
@@ -240,9 +255,6 @@ export default function AdminPage() {
     sessionStorage.removeItem('chavali_admin_token');
   };
 
-  // ----------------------------------------------------------------------------
-  // Donor Handlers
-  // ----------------------------------------------------------------------------
   const handleOpenAddDonor = () => {
     setEditingDonorId(null);
     setDonorFormData({
@@ -290,16 +302,16 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setDonorFormMsg('✓ তথ্য সফলভাবে সংরক্ষিত হয়েছে!');
+        setDonorFormMsg('তথ্য সফলভাবে সংরক্ষিত হয়েছে');
         fetchAllData();
         setTimeout(() => {
           setShowDonorModal(false);
         }, 1000);
       } else {
-        setDonorFormMsg(`⚠️ ${data.message || 'সংরক্ষণ ব্যর্থ হয়েছে'}`);
+        setDonorFormMsg(data.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
       }
     } catch {
-      setDonorFormMsg('⚠️ নেটওয়ার্ক ত্রুটি');
+      setDonorFormMsg('নেটওয়ার্ক ত্রুটি');
     } finally {
       setSavingDonor(false);
     }
@@ -324,9 +336,6 @@ export default function AdminPage() {
     }
   };
 
-  // ----------------------------------------------------------------------------
-  // Donation Handlers
-  // ----------------------------------------------------------------------------
   const handleDonationImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -359,7 +368,7 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setDonationFormMsg('✓ রক্তদান রেকর্ড সফলভাবে সংরক্ষিত হয়েছে!');
+        setDonationFormMsg('রক্তদান রেকর্ড সফলভাবে সংরক্ষিত হয়েছে');
         setDonationForm({
           donorName: '',
           donorPhone: '',
@@ -373,10 +382,10 @@ export default function AdminPage() {
         setEditingDonationId(null);
         fetchAllData();
       } else {
-        setDonationFormMsg(`⚠️ ${data.message || 'সংরক্ষণ সম্ভব হয়নি'}`);
+        setDonationFormMsg(data.message || 'সংরক্ষণ সম্ভব হয়নি');
       }
     } catch {
-      setDonationFormMsg('⚠️ নেটওয়ার্ক ত্রুটি');
+      setDonationFormMsg('নেটওয়ার্ক ত্রুটি');
     } finally {
       setSavingDonation(false);
     }
@@ -416,9 +425,6 @@ export default function AdminPage() {
     }
   };
 
-  // ----------------------------------------------------------------------------
-  // Certificate Generator Handlers
-  // ----------------------------------------------------------------------------
   const handleSelectDonationForCert = (dId: string) => {
     if (!dId) return;
     const selected = donations.find((d) => String(d.id) === dId);
@@ -459,13 +465,13 @@ export default function AdminPage() {
 
       if (res.ok && data.success && data.data) {
         setSavedCertId(data.data.id);
-        setCertSaveMsg(`✓ প্রশংসাপত্র সফলভাবে সংরক্ষিত হয়েছে! ID: ${data.data.id}`);
+        setCertSaveMsg(`প্রশংসাপত্র সফলভাবে সংরক্ষিত হয়েছে (ID: ${data.data.id})`);
         fetchAllData();
       } else {
-        setCertSaveMsg(`⚠️ ${data.message || 'প্রশংসাপত্র সংরক্ষণ করা যায়নি'}`);
+        setCertSaveMsg(data.message || 'প্রশংসাপত্র সংরক্ষণ করা যায়নি');
       }
     } catch {
-      setCertSaveMsg('⚠️ নেটওয়ার্ক ত্রুটি');
+      setCertSaveMsg('নেটওয়ার্ক ত্রুটি');
     } finally {
       setCertLoading(false);
     }
@@ -485,27 +491,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteCertificate = async (id: string | number) => {
-    if (!confirm('আপনি কি এই প্রশংসাপত্র রেকর্ডটি মুছে ফেলতে চান?')) return;
-    try {
-      const res = await fetch(`/api/certificates/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchAllData();
-      } else {
-        alert(data.message || 'মুছে ফেলা যায়নি');
-      }
-    } catch {
-      alert('সার্ভার ত্রুটি');
-    }
-  };
-
-  // ----------------------------------------------------------------------------
-  // Gallery Handlers
-  // ----------------------------------------------------------------------------
   const handleGalleryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -540,15 +525,15 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setGalleryMsg('✓ ছবি সফলভাবে গ্যালারিতে যুক্ত হয়েছে!');
+        setGalleryMsg('ছবি সফলভাবে গ্যালারিতে যুক্ত হয়েছে');
         setGalleryCaption('');
         setGalleryImgData(null);
         fetchAllData();
       } else {
-        setGalleryMsg(`⚠️ ${data.message || 'ছবি আপলোড ব্যর্থ হয়েছে'}`);
+        setGalleryMsg(data.message || 'ছবি আপলোড ব্যর্থ হয়েছে');
       }
     } catch {
-      setGalleryMsg('⚠️ নেটওয়ার্ক ত্রুটি');
+      setGalleryMsg('নেটওয়ার্ক ত্রুটি');
     } finally {
       setUploadingGallery(false);
     }
@@ -572,9 +557,6 @@ export default function AdminPage() {
     }
   };
 
-  // ----------------------------------------------------------------------------
-  // Message Handlers
-  // ----------------------------------------------------------------------------
   const handleToggleMessageRead = async (msg: ContactMessage) => {
     try {
       const res = await fetch(`/api/contact/${msg.id}`, {
@@ -601,13 +583,10 @@ export default function AdminPage() {
     }
   };
 
-  // ----------------------------------------------------------------------------
-  // Password Change Handler
-  // ----------------------------------------------------------------------------
   const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (pwdForm.newPassword !== pwdForm.confirmPassword) {
-      setPwdMsg('⚠️ নতুন পাসওয়ার্ড এবং কনফার্ম পাসওয়ার্ড মিলছে না');
+      setPwdMsg('নতুন পাসওয়ার্ড এবং কনফার্ম পাসওয়ার্ড মিলছে না');
       return;
     }
 
@@ -626,19 +605,18 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setPwdMsg('✓ পাসওয়ার্ড সফলভাবে আপডেট হয়েছে!');
+        setPwdMsg('পাসওয়ার্ড সফলভাবে আপডেট হয়েছে');
         setPwdForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
-        setPwdMsg(`⚠️ ${data.message || 'পাসওয়ার্ড পরিবর্তন করা যায়নি'}`);
+        setPwdMsg(data.message || 'পাসওয়ার্ড পরিবর্তন করা যায়নি');
       }
     } catch {
-      setPwdMsg('⚠️ নেটওয়ার্ক ত্রুটি');
+      setPwdMsg('নেটওয়ার্ক ত্রুটি');
     } finally {
       setSavingPwd(false);
     }
   };
 
-  // Filtered Donors
   const filteredDonors = donors.filter((d) => {
     const matchGroup = donorGroupFilter === 'all' || d.bloodGroup === donorGroupFilter;
     const q = donorSearch.toLowerCase().trim();
@@ -667,7 +645,9 @@ export default function AdminPage() {
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔐</div>
+            <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '16px' }}>
+              <Lock size={36} />
+            </div>
             <h2 style={{ color: '#DC2626', marginBottom: '6px' }}>চাঁভালি এডমিন লগইন</h2>
             <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '24px' }}>
               ওয়েবসাইট ব্যবস্থাপনা ও ডেটাবেস নিয়ন্ত্রণ প্যানেল
@@ -683,9 +663,13 @@ export default function AdminPage() {
                   marginBottom: '20px',
                   fontSize: '0.9rem',
                   fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
-                ⚠️ {loginMessage}
+                <AlertCircle size={16} />
+                <span>{loginMessage}</span>
               </div>
             )}
 
@@ -755,9 +739,10 @@ export default function AdminPage() {
                 type="submit"
                 className="submit-btn"
                 disabled={loadingLogin}
-                style={{ width: '100%', padding: '14px' }}
+                style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {loadingLogin ? 'লগইন হচ্ছে...' : 'লগইন করুন 🚀'}
+                <Lock size={16} />
+                <span>{loadingLogin ? 'লগইন হচ্ছে...' : 'লগইন করুন'}</span>
               </button>
             </form>
           </div>
@@ -819,9 +804,13 @@ export default function AdminPage() {
                 textDecoration: 'none',
                 fontWeight: 600,
                 fontSize: '0.9rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
-              🌐 ওয়েবসাইট দেখুন
+              <Globe size={16} />
+              <span>ওয়েবসাইট দেখুন</span>
             </Link>
             <button
               onClick={handleLogout}
@@ -835,9 +824,13 @@ export default function AdminPage() {
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: '0.9rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
-              🚪 লগআউট
+              <LogOut size={16} />
+              <span>লগআউট</span>
             </button>
           </div>
         </div>
@@ -920,35 +913,42 @@ export default function AdminPage() {
           }}
         >
           {[
-            { id: 'adminDonors', label: '🩸 রক্তদাতা তালিকা' },
-            { id: 'adminDonations', label: '📋 রক্তদান কার্যক্রম' },
-            { id: 'adminCertificates', label: '🏆 প্রশংসাপত্র জেনারেটর' },
-            { id: 'adminGallery', label: '🖼️ গ্যালারি আপলোড' },
-            { id: 'adminMessages', label: `✉️ বার্তা ইনবক্স (${messages.filter((m) => !m.isRead).length})` },
-            { id: 'adminAnalytics', label: '📊 অ্যানালিটিক্স' },
-            { id: 'adminSettings', label: '🔒 সেটিংস ও পাসওয়ার্ড' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as AdminTab)}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                background: activeTab === tab.id ? '#DC2626' : '#fff',
-                color: activeTab === tab.id ? '#fff' : '#374151',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                boxShadow: 'var(--shadow)',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'adminDonors', label: 'রক্তদাতা তালিকা', icon: Users },
+            { id: 'adminDonations', label: 'রক্তদান কার্যক্রম', icon: FileText },
+            { id: 'adminCertificates', label: 'প্রশংসাপত্র জেনারেটর', icon: Award },
+            { id: 'adminGallery', label: 'গ্যালারি আপলোড', icon: ImageIcon },
+            { id: 'adminMessages', label: `বার্তা ইনবক্স (${messages.filter((m) => !m.isRead).length})`, icon: Mail },
+            { id: 'adminAnalytics', label: 'অ্যানালিটিক্স', icon: BarChart3 },
+            { id: 'adminSettings', label: 'সেটিংস ও পাসওয়ার্ড', icon: Key },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as AdminTab)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: activeTab === tab.id ? '#DC2626' : '#fff',
+                  color: activeTab === tab.id ? '#fff' : '#374151',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Icon size={16} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ========================================================================= */}
@@ -973,9 +973,10 @@ export default function AdminPage() {
                 onClick={handleOpenAddDonor}
                 type="button"
                 className="submit-btn"
-                style={{ padding: '10px 18px', fontSize: '0.9rem' }}
+                style={{ padding: '10px 18px', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                + নতুন রক্তদাতা যুক্ত করুন
+                <Plus size={16} />
+                <span>নতুন রক্তদাতা যুক্ত করুন</span>
               </button>
             </div>
 
@@ -983,7 +984,7 @@ export default function AdminPage() {
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
               <input
                 type="text"
-                placeholder="🔍 নাম, ফোন নম্বর বা এলাকা দিয়ে খুঁজুন..."
+                placeholder="নাম, ফোন নম্বর বা এলাকা দিয়ে খুঁজুন..."
                 value={donorSearch}
                 onChange={(e) => setDonorSearch(e.target.value)}
                 style={{
@@ -1150,9 +1151,9 @@ export default function AdminPage() {
                     <button
                       onClick={() => setShowDonorModal(false)}
                       type="button"
-                      style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}
                     >
-                      ✕
+                      <X size={20} />
                     </button>
                   </div>
 
@@ -1363,7 +1364,7 @@ export default function AdminPage() {
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                   <button type="submit" className="submit-btn" disabled={savingDonation || compressingImg} style={{ flex: 1 }}>
-                    {savingDonation ? 'সংরক্ষণ হচ্ছে...' : editingDonationId ? 'আপডেট করুন' : 'রেকর্ড সংরক্ষণ করুন 🩸'}
+                    {savingDonation ? 'সংরক্ষণ হচ্ছে...' : editingDonationId ? 'আপডেট করুন' : 'রেকর্ড সংরক্ষণ করুন'}
                   </button>
                   {editingDonationId && (
                     <button
@@ -1433,10 +1434,10 @@ export default function AdminPage() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '1.4rem',
+                          color: '#DC2626',
                         }}
                       >
-                        🩸
+                        <FileText size={24} />
                       </div>
                     )}
                     <div style={{ flex: 1 }}>
@@ -1455,9 +1456,9 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-                        📅 {d.date} | ID: {d.number}
+                        তারিখ: {d.date} | ID: {d.number}
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>📍 {d.donorAddress}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{d.donorAddress}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <button
@@ -1602,17 +1603,19 @@ export default function AdminPage() {
                   onClick={handleSaveCertificate}
                   className="submit-btn"
                   disabled={certLoading}
-                  style={{ flex: 1, minWidth: '160px' }}
+                  style={{ flex: 1, minWidth: '160px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 >
-                  {certLoading ? 'সংরক্ষণ হচ্ছে...' : '💾 ডেটাবেসে সংরক্ষণ করুন'}
+                  <Save size={16} />
+                  <span>{certLoading ? 'সংরক্ষণ হচ্ছে...' : 'ডেটাবেসে সংরক্ষণ করুন'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDownloadCert}
                   className="submit-btn"
-                  style={{ background: '#2563eb', flex: 1, minWidth: '160px' }}
+                  style={{ background: '#2563eb', flex: 1, minWidth: '160px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 >
-                  📥 ডাউনলোড (PNG)
+                  <Download size={16} />
+                  <span>ডাউনলোড (PNG)</span>
                 </button>
               </div>
 
@@ -1621,9 +1624,10 @@ export default function AdminPage() {
                   <Link
                     href={`/certificates/${savedCertId}`}
                     target="_blank"
-                    style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 600, fontSize: '0.9rem' }}
+                    style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 600, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                   >
-                    🔗 পাবলিক সার্টিফিকেট পেজ ওপেন করুন →
+                    <span>পাবলিক সার্টিফিকেট পেজ ওপেন করুন</span>
+                    <ExternalLink size={14} />
                   </Link>
                 </div>
               )}
@@ -1776,9 +1780,10 @@ export default function AdminPage() {
                 type="submit"
                 className="submit-btn"
                 disabled={uploadingGallery}
-                style={{ marginTop: '10px' }}
+                style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                {uploadingGallery ? 'আপলোড হচ্ছে...' : 'ছবি আপলোড করুন 📤'}
+                <Upload size={16} />
+                <span>{uploadingGallery ? 'আপলোড হচ্ছে...' : 'ছবি আপলোড করুন'}</span>
               </button>
             </form>
 
@@ -1897,12 +1902,12 @@ export default function AdminPage() {
                       <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>
                         {msg.phone && (
                           <a href={`tel:${msg.phone}`} style={{ marginRight: '12px', color: '#2563eb' }}>
-                            📞 {msg.phone}
+                            {msg.phone}
                           </a>
                         )}
                         {msg.email && (
                           <a href={`mailto:${msg.email}`} style={{ color: '#2563eb' }}>
-                            ✉️ {msg.email}
+                            {msg.email}
                           </a>
                         )}
                       </div>

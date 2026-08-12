@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Phone, Mail, MapPin } from 'lucide-react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -39,16 +40,22 @@ export default function Footer() {
 
         <div className="footer-contact">
           <h4>যোগাযোগ ও হটলাইন</h4>
-          <p>
-            📞 <a href="tel:+8801757831838">+880 1757-831838</a>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Phone size={16} />
+            <a href="tel:+8801757831838">+880 1757-831838</a>
           </p>
-          <p>
-            📞 <a href="tel:+8801785466153">+880 1785-466153</a>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Phone size={16} />
+            <a href="tel:+8801785466153">+880 1785-466153</a>
           </p>
-          <p>
-            ✉️ <a href="mailto:chavalibloodfoundation@gmail.com">chavalibloodfoundation@gmail.com</a>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Mail size={16} />
+            <a href="mailto:chavalibloodfoundation@gmail.com">chavalibloodfoundation@gmail.com</a>
           </p>
-          <p>📍 চাঁপাইনবাবগঞ্জ সদর, চাঁপাইনবাবগঞ্জ</p>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MapPin size={16} />
+            <span>চাঁপাইনবাবগঞ্জ সদর, চাঁপাইনবাবগঞ্জ</span>
+          </p>
         </div>
       </div>
 

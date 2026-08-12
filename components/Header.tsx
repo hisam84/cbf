@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Droplet } from 'lucide-react';
 
 export default function Header() {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -44,7 +45,7 @@ export default function Header() {
               }}
             />
             <span className="logo-icon" style={{ display: 'none' }}>
-              🩸
+              <Droplet size={20} fill="#ffffff" />
             </span>
             <span>চাঁভালি রক্ত ফাউন্ডেশন</span>
           </Link>

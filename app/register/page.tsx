@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { DonorInput } from '@/lib/types';
 import { calculateEligibility } from '@/lib/validators';
+import { Check, AlertCircle, Info, ArrowRight } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState<DonorInput>({
@@ -81,16 +82,31 @@ export default function RegisterPage() {
                 border: `1px solid ${isSuccess ? '#bbf7d0' : '#fecaca'}`,
                 fontWeight: 600,
                 textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              {isSuccess ? '✓ ' : '⚠️ '} {statusMessage}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isSuccess ? <Check size={20} color="#166534" /> : <AlertCircle size={20} color="#991b1b" />}
+                <span>{statusMessage}</span>
+              </div>
               {isSuccess && (
-                <div style={{ marginTop: '10px' }}>
+                <div style={{ marginTop: '6px' }}>
                   <Link
                     href="/donors"
-                    style={{ color: '#166534', textDecoration: 'underline', fontWeight: 700 }}
+                    style={{
+                      color: '#166534',
+                      textDecoration: 'underline',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
                   >
-                    রক্তদাতা তালিকায় আপনার নাম দেখুন →
+                    <span>রক্তদাতা তালিকায় আপনার নাম দেখুন</span>
+                    <ArrowRight size={14} />
                   </Link>
                 </div>
               )}
@@ -172,11 +188,25 @@ export default function RegisterPage() {
                       marginTop: '6px',
                       color: eligibility.isEligible ? '#166534' : '#b45309',
                       fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
                     }}
                   >
-                    {eligibility.isEligible
-                      ? '✓ আপনি রক্তদানের জন্য প্রস্তুত (৯০ দিন অতিক্রান্ত হয়েছে)'
-                      : `ℹ️ শেষ রক্তদান থেকে ${eligibility.daysSinceLastDonation} দিন অতিবাহিত হয়েছে। পরবর্তী উপযুক্ত তারিখ: ${eligibility.nextEligibleDate}`}
+                    {eligibility.isEligible ? (
+                      <>
+                        <Check size={14} />
+                        <span>আপনি রক্তদানের জন্য প্রস্তুত (৯০ দিন অতিক্রান্ত হয়েছে)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Info size={14} />
+                        <span>
+                          শেষ রক্তদান থেকে {eligibility.daysSinceLastDonation} দিন অতিবাহিত হয়েছে। পরবর্তী উপযুক্ত
+                          তারিখ: {eligibility.nextEligibleDate}
+                        </span>
+                      </>
+                    )}
                   </p>
                 )}
               </div>
@@ -210,7 +240,7 @@ export default function RegisterPage() {
               disabled={loading}
               style={{ marginTop: '14px', width: '100%' }}
             >
-              {loading ? 'তথ্য সংরক্ষণ করা হচ্ছে...' : 'রক্তদান নিবন্ধন সম্পূর্ণ করুন 🩸'}
+              {loading ? 'তথ্য সংরক্ষণ করা হচ্ছে...' : 'রক্তদান নিবন্ধন সম্পূর্ণ করুন'}
             </button>
           </form>
         </div>

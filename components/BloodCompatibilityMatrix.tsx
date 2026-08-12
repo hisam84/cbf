@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ValidBloodGroup, VALID_BLOOD_GROUPS } from '@/lib/types';
 import { BLOOD_COMPATIBILITY_MAP } from '@/lib/validators';
+import { Droplet, ArrowUpRight, ArrowDownLeft, Info, ArrowRight } from 'lucide-react';
 
 interface Props {
   initialGroup?: ValidBloodGroup;
@@ -28,7 +29,9 @@ export default function BloodCompatibilityMatrix({ initialGroup = 'O+' }: Props)
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <span
           style={{
-            display: 'inline-block',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
             padding: '4px 14px',
             background: 'var(--primary-light)',
             color: 'var(--primary)',
@@ -38,7 +41,8 @@ export default function BloodCompatibilityMatrix({ initialGroup = 'O+' }: Props)
             marginBottom: '8px',
           }}
         >
-          🩸 ইন্টারেক্টিভ রক্তদান নির্দেশিকা
+          <Droplet size={14} fill="currentColor" />
+          ইন্টারেক্টিভ রক্তদান নির্দেশিকা
         </span>
         <h3 style={{ fontSize: '1.5rem', color: '#1f2937', fontWeight: 800 }}>
           রক্তের গ্রুপ ও গ্রহণ-দানের সামঞ্জস্যতা
@@ -112,7 +116,7 @@ export default function BloodCompatibilityMatrix({ initialGroup = 'O+' }: Props)
               color: '#166534',
             }}
           >
-            <span style={{ fontSize: '1.4rem' }}>🎁</span>
+            <ArrowUpRight size={20} />
             <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
               <strong style={{ color: '#DC2626' }}>{selectedGroup}</strong> রক্ত দিতে পারবে:
             </h4>
@@ -157,7 +161,7 @@ export default function BloodCompatibilityMatrix({ initialGroup = 'O+' }: Props)
               color: '#1e40af',
             }}
           >
-            <span style={{ fontSize: '1.4rem' }}>💉</span>
+            <ArrowDownLeft size={20} />
             <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
               <strong style={{ color: '#DC2626' }}>{selectedGroup}</strong> রক্ত গ্রহণ করতে পারবে:
             </h4>
@@ -199,9 +203,10 @@ export default function BloodCompatibilityMatrix({ initialGroup = 'O+' }: Props)
           gap: '14px',
         }}
       >
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Info size={18} color="#991b1b" />
           <p style={{ margin: 0, color: '#991b1b', fontWeight: 600, fontSize: '0.95rem' }}>
-            ℹ️ {info.description}
+            {info.description}
           </p>
         </div>
         <Link
@@ -220,7 +225,7 @@ export default function BloodCompatibilityMatrix({ initialGroup = 'O+' }: Props)
             boxShadow: '0 2px 6px rgba(220,38,38,0.3)',
           }}
         >
-          {selectedGroup} রক্তদাতা খুঁজুন →
+          {selectedGroup} রক্তদাতা খুঁজুন <ArrowRight size={14} />
         </Link>
       </div>
     </div>
