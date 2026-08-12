@@ -4,9 +4,12 @@ import { verifyAdminRequest } from '@/lib/auth';
 import { normalizePhone, validateBloodGroup, sanitizeText } from '@/lib/validators';
 import { ApiResponse, Donation, DonationInput } from '@/lib/types';
 
-export async function GET(): Promise<NextResponse<ApiResponse<Donation[]>>> {
+export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Donation[]>>> {
   try {
     await ensureTablesExist();
+    const auth = verifyAdminRequest(req);
+    const isAdmin = auth.authenticated;
+
     if (isConfigured()) {
       const sql = getSql();
       if (!sql) {
@@ -21,11 +24,17 @@ export async function GET(): Promise<NextResponse<ApiResponse<Donation[]>>> {
         ORDER BY date DESC, added_at DESC;
       `) as any[];
 
+      // Mask or omit mobile number for public frontend queries
+      const safeDonations = donations.map((d) => ({
+        ...d,
+        donorPhone: isAdmin ? d.donorPhone : '', // Hidden on public frontend
+      }));
+
       return NextResponse.json({
         success: true,
         source: 'neon_postgres',
-        count: donations.length,
-        data: donations as Donation[],
+        count: safeDonations.length,
+        data: safeDonations as Donation[],
       });
     }
 
