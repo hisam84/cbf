@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { compressImage, toBengali } from '@/lib/image-compress';
+import { compressImage } from '@/lib/image-compress';
 import {
   Donor,
   DonorInput,
@@ -73,7 +73,7 @@ export default function AdminPage() {
   const [dbStatus, setDbStatus] = useState<DbStatus>({
     connected: false,
     configured: false,
-    message: 'Checking...',
+    message: 'Checking connection...',
   });
   const [donors, setDonors] = useState<Donor[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
@@ -131,7 +131,7 @@ export default function AdminPage() {
   const [certAddress, setCertAddress] = useState<string>('');
   const [certNumber, setCertNumber] = useState<string>('');
   const [certMessageText, setCertMessageText] = useState<string>(
-    'Thank you for your generous blood donation. Your contribution helps save lives and makes our community healthier.'
+    'In sincere recognition and deep gratitude for your noble contribution of voluntary blood donation through Chavali Blood Foundation. Your generosity has saved an invaluable human life.'
   );
   const [certLoading, setCertLoading] = useState<boolean>(false);
   const [certSaveMsg, setCertSaveMsg] = useState<string | null>(null);
@@ -239,10 +239,10 @@ export default function AdminPage() {
         setIsLoggedIn(true);
         localStorage.setItem('chavali_admin_token', data.token);
       } else {
-        setLoginMessage(data.message || 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়');
+        setLoginMessage(data.message || 'Invalid username or password.');
       }
     } catch {
-      setLoginMessage('সার্ভারের সাথে যোগাযোগ করা যায়নি');
+      setLoginMessage('Could not connect to authentication server.');
     } finally {
       setLoadingLogin(false);
     }
@@ -302,23 +302,23 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setDonorFormMsg('তথ্য সফলভাবে সংরক্ষিত হয়েছে');
+        setDonorFormMsg('Donor details saved successfully!');
         fetchAllData();
         setTimeout(() => {
           setShowDonorModal(false);
         }, 1000);
       } else {
-        setDonorFormMsg(data.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+        setDonorFormMsg(data.message || 'Failed to save donor details.');
       }
     } catch {
-      setDonorFormMsg('নেটওয়ার্ক ত্রুটি');
+      setDonorFormMsg('Network error while saving donor.');
     } finally {
       setSavingDonor(false);
     }
   };
 
   const handleDeleteDonor = async (id: string | number, name: string) => {
-    if (!confirm(`আপনি কি নিশ্চিত যে "${name}"-কে তালিকা থেকে মুছে ফেলতে চান?`)) return;
+    if (!confirm(`Are you sure you want to permanently delete donor "${name}"?`)) return;
 
     try {
       const res = await fetch(`/api/donors/${id}`, {
@@ -329,10 +329,10 @@ export default function AdminPage() {
       if (data.success) {
         fetchAllData();
       } else {
-        alert(data.message || 'মুছে ফেলা যায়নি');
+        alert(data.message || 'Could not delete donor.');
       }
     } catch {
-      alert('সার্ভার ত্রুটি');
+      alert('Server error occurred.');
     }
   };
 
@@ -345,7 +345,7 @@ export default function AdminPage() {
       const compressedBase64 = await compressImage(file, 1200, 1200, 0.82);
       setDonationForm((prev) => ({ ...prev, image: compressedBase64 }));
     } catch (err: any) {
-      alert('ছবি প্রসেসিং ত্রুটি: ' + err?.message);
+      alert('Image processing error: ' + err?.message);
     } finally {
       setCompressingImg(false);
     }
@@ -368,7 +368,7 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setDonationFormMsg('রক্তদান রেকর্ড সফলভাবে সংরক্ষিত হয়েছে');
+        setDonationFormMsg('Donation record saved successfully!');
         setDonationForm({
           donorName: '',
           donorPhone: '',
@@ -382,10 +382,10 @@ export default function AdminPage() {
         setEditingDonationId(null);
         fetchAllData();
       } else {
-        setDonationFormMsg(data.message || 'সংরক্ষণ সম্ভব হয়নি');
+        setDonationFormMsg(data.message || 'Could not save donation record.');
       }
     } catch {
-      setDonationFormMsg('নেটওয়ার্ক ত্রুটি');
+      setDonationFormMsg('Network error while saving donation record.');
     } finally {
       setSavingDonation(false);
     }
@@ -407,7 +407,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteDonation = async (id: string | number) => {
-    if (!confirm('আপনি কি এই রক্তদান রেকর্ডটি মুছে ফেলতে চান?')) return;
+    if (!confirm('Are you sure you want to permanently delete this donation record?')) return;
 
     try {
       const res = await fetch(`/api/donations/${id}`, {
@@ -418,10 +418,10 @@ export default function AdminPage() {
       if (data.success) {
         fetchAllData();
       } else {
-        alert(data.message || 'মুছে ফেলা যায়নি');
+        alert(data.message || 'Could not delete record.');
       }
     } catch {
-      alert('সার্ভার ত্রুটি');
+      alert('Server error occurred.');
     }
   };
 
@@ -440,7 +440,7 @@ export default function AdminPage() {
 
   const handleSaveCertificate = async () => {
     if (!certDonorName || !certBloodGroup || !certDate) {
-      alert('রক্তদাতার নাম, রক্তের গ্রুপ এবং তারিখ পূরণ করুন');
+      alert('Please fill in Donor Name, Blood Group, and Donation Date.');
       return;
     }
 
@@ -465,13 +465,13 @@ export default function AdminPage() {
 
       if (res.ok && data.success && data.data) {
         setSavedCertId(data.data.id);
-        setCertSaveMsg(`প্রশংসাপত্র সফলভাবে সংরক্ষিত হয়েছে (ID: ${data.data.id})`);
+        setCertSaveMsg(`Certificate saved to database successfully! (Certificate ID: ${data.data.id})`);
         fetchAllData();
       } else {
-        setCertSaveMsg(data.message || 'প্রশংসাপত্র সংরক্ষণ করা যায়নি');
+        setCertSaveMsg(data.message || 'Could not save certificate.');
       }
     } catch {
-      setCertSaveMsg('নেটওয়ার্ক ত্রুটি');
+      setCertSaveMsg('Network error while saving certificate.');
     } finally {
       setCertLoading(false);
     }
@@ -483,11 +483,11 @@ export default function AdminPage() {
       const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(certRef.current, { scale: 2, useCORS: true });
       const link = document.createElement('a');
-      link.download = `Certificate_${certDonorName || 'Donor'}.png`;
+      link.download = `Certificate_${certDonorName.replace(/\s+/g, '_') || 'Donor'}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (err: any) {
-      alert('ডাউনলোড ত্রুটি: ' + err?.message);
+      alert('Download generation error: ' + err?.message);
     }
   };
 
@@ -498,14 +498,14 @@ export default function AdminPage() {
       const base64 = await compressImage(file, 1200, 1200, 0.85);
       setGalleryImgData(base64);
     } catch (err: any) {
-      alert('ছবি প্রসেসিং ত্রুটি: ' + err?.message);
+      alert('Image compression error: ' + err?.message);
     }
   };
 
   const handleSaveGallery = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!galleryImgData) {
-      alert('অনুগ্রহ করে একটি ছবি নির্বাচন করুন');
+      alert('Please select an image file to upload.');
       return;
     }
 
@@ -525,22 +525,22 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setGalleryMsg('ছবি সফলভাবে গ্যালারিতে যুক্ত হয়েছে');
+        setGalleryMsg('Photo uploaded to gallery successfully!');
         setGalleryCaption('');
         setGalleryImgData(null);
         fetchAllData();
       } else {
-        setGalleryMsg(data.message || 'ছবি আপলোড ব্যর্থ হয়েছে');
+        setGalleryMsg(data.message || 'Failed to upload photo.');
       }
     } catch {
-      setGalleryMsg('নেটওয়ার্ক ত্রুটি');
+      setGalleryMsg('Network error while uploading photo.');
     } finally {
       setUploadingGallery(false);
     }
   };
 
   const handleDeleteGalleryItem = async (id: string | number) => {
-    if (!confirm('আপনি কি এই ছবিটি গ্যালারি থেকে মুছে ফেলতে চান?')) return;
+    if (!confirm('Are you sure you want to delete this photo from the gallery?')) return;
     try {
       const res = await fetch(`/api/gallery/${id}`, {
         method: 'DELETE',
@@ -550,10 +550,10 @@ export default function AdminPage() {
       if (data.success) {
         fetchAllData();
       } else {
-        alert(data.message || 'মুছে ফেলা যায়নি');
+        alert(data.message || 'Could not delete photo.');
       }
     } catch {
-      alert('সার্ভার ত্রুটি');
+      alert('Server error occurred.');
     }
   };
 
@@ -571,7 +571,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteMessage = async (id: string | number) => {
-    if (!confirm('আপনি কি এই বার্তাটি মুছে ফেলতে চান?')) return;
+    if (!confirm('Are you sure you want to delete this message?')) return;
     try {
       const res = await fetch(`/api/contact/${id}`, {
         method: 'DELETE',
@@ -579,14 +579,14 @@ export default function AdminPage() {
       });
       if (res.ok) fetchAllData();
     } catch {
-      alert('সার্ভার ত্রুটি');
+      alert('Server error occurred.');
     }
   };
 
   const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (pwdForm.newPassword !== pwdForm.confirmPassword) {
-      setPwdMsg('নতুন পাসওয়ার্ড এবং কনফার্ম পাসওয়ার্ড মিলছে না');
+      setPwdMsg('New password and confirm password do not match.');
       return;
     }
 
@@ -605,13 +605,13 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setPwdMsg('পাসওয়ার্ড সফলভাবে আপডেট হয়েছে');
+        setPwdMsg('Admin password updated successfully!');
         setPwdForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
-        setPwdMsg(data.message || 'পাসওয়ার্ড পরিবর্তন করা যায়নি');
+        setPwdMsg(data.message || 'Could not update password.');
       }
     } catch {
-      setPwdMsg('নেটওয়ার্ক ত্রুটি');
+      setPwdMsg('Network error while updating password.');
     } finally {
       setSavingPwd(false);
     }
@@ -629,7 +629,7 @@ export default function AdminPage() {
   });
 
   // ----------------------------------------------------------------------------
-  // LOGIN SCREEN
+  // LOGIN SCREEN (ENGLISH)
   // ----------------------------------------------------------------------------
   if (!isLoggedIn) {
     return (
@@ -645,12 +645,21 @@ export default function AdminPage() {
               textAlign: 'center',
             }}
           >
-            <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '16px' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                padding: '16px',
+                background: '#fee2e2',
+                borderRadius: '50%',
+                color: '#DC2626',
+                marginBottom: '16px',
+              }}
+            >
               <Lock size={36} />
             </div>
-            <h2 style={{ color: '#DC2626', marginBottom: '6px' }}>চাঁভালি এডমিন লগইন</h2>
+            <h2 style={{ color: '#DC2626', marginBottom: '6px' }}>Admin Portal Login</h2>
             <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '24px' }}>
-              ওয়েবসাইট ব্যবস্থাপনা ও ডেটাবেস নিয়ন্ত্রণ প্যানেল
+              Chavali Blood Foundation Database & Management Dashboard
             </p>
 
             {loginMessage && (
@@ -676,12 +685,12 @@ export default function AdminPage() {
             <form onSubmit={handleLogin} style={{ textAlign: 'left' }}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
-                  ইউজারনেম
+                  Username
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="admin"
+                  placeholder="Enter username"
                   value={loginForm.username}
                   onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
                   style={{
@@ -697,7 +706,7 @@ export default function AdminPage() {
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
-                  পাসওয়ার্ড
+                  Password
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -728,9 +737,10 @@ export default function AdminPage() {
                       cursor: 'pointer',
                       fontSize: '0.9rem',
                       color: '#6b7280',
+                      fontWeight: 600,
                     }}
                   >
-                    {showPassword ? 'লুকান' : 'দেখান'}
+                    {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
               </div>
@@ -739,10 +749,17 @@ export default function AdminPage() {
                 type="submit"
                 className="submit-btn"
                 disabled={loadingLogin}
-                style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
               >
                 <Lock size={16} />
-                <span>{loadingLogin ? 'লগইন হচ্ছে...' : 'লগইন করুন'}</span>
+                <span>{loadingLogin ? 'Signing In...' : 'Sign In'}</span>
               </button>
             </form>
           </div>
@@ -752,7 +769,7 @@ export default function AdminPage() {
   }
 
   // ----------------------------------------------------------------------------
-  // LOGGED-IN ADMIN DASHBOARD
+  // LOGGED-IN ADMIN DASHBOARD (ENGLISH)
   // ----------------------------------------------------------------------------
   return (
     <section className="section section-alt" style={{ paddingTop: '30px', minHeight: '90vh' }}>
@@ -773,7 +790,7 @@ export default function AdminPage() {
           }}
         >
           <div>
-            <h2 style={{ color: '#DC2626', margin: 0, fontSize: '1.6rem' }}>চাঁভালি রক্ত ফাউন্ডেশন এডমিন</h2>
+            <h2 style={{ color: '#DC2626', margin: 0, fontSize: '1.6rem' }}>Chavali Admin Dashboard</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
               <span
                 style={{
@@ -786,7 +803,7 @@ export default function AdminPage() {
               ></span>
               <span style={{ fontSize: '0.85rem', color: '#4b5563' }}>
                 {dbStatus.connected
-                  ? `Neon PostgreSQL সংযুক্ত (${dbStatus.latencyMs}ms)`
+                  ? `Neon PostgreSQL Connected (${dbStatus.latencyMs}ms latency)`
                   : dbStatus.message}
               </span>
             </div>
@@ -810,7 +827,7 @@ export default function AdminPage() {
               }}
             >
               <Globe size={16} />
-              <span>ওয়েবসাইট দেখুন</span>
+              <span>View Website</span>
             </Link>
             <button
               onClick={handleLogout}
@@ -830,7 +847,7 @@ export default function AdminPage() {
               }}
             >
               <LogOut size={16} />
-              <span>লগআউট</span>
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
@@ -853,9 +870,9 @@ export default function AdminPage() {
               borderLeft: '4px solid #DC2626',
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>মোট রক্তদাতা</span>
+            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Total Donors</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#DC2626' }}>
-              {toBengali(stats.totalDonors || donors.length)}
+              {(stats.totalDonors || donors.length).toLocaleString()}
             </div>
           </div>
           <div
@@ -867,9 +884,9 @@ export default function AdminPage() {
               borderLeft: '4px solid #2563eb',
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>মোট রক্তদান রেকর্ড</span>
+            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Donation Records</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2563eb' }}>
-              {toBengali(stats.totalDonations || donations.length)}
+              {(stats.totalDonations || donations.length).toLocaleString()}
             </div>
           </div>
           <div
@@ -881,9 +898,9 @@ export default function AdminPage() {
               borderLeft: '4px solid #10b981',
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>প্রশংসাপত্র প্রস্তুত</span>
+            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Certificates Issued</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10b981' }}>
-              {toBengali(stats.totalCertificates || certificates.length)}
+              {(stats.totalCertificates || certificates.length).toLocaleString()}
             </div>
           </div>
           <div
@@ -895,9 +912,9 @@ export default function AdminPage() {
               borderLeft: '4px solid #8b5cf6',
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>নতুন বার্তা</span>
+            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Unread Messages</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6' }}>
-              {toBengali(messages.filter((m) => !m.isRead).length)}
+              {messages.filter((m) => !m.isRead).length}
             </div>
           </div>
         </div>
@@ -913,13 +930,17 @@ export default function AdminPage() {
           }}
         >
           {[
-            { id: 'adminDonors', label: 'রক্তদাতা তালিকা', icon: Users },
-            { id: 'adminDonations', label: 'রক্তদান কার্যক্রম', icon: FileText },
-            { id: 'adminCertificates', label: 'প্রশংসাপত্র জেনারেটর', icon: Award },
-            { id: 'adminGallery', label: 'গ্যালারি আপলোড', icon: ImageIcon },
-            { id: 'adminMessages', label: `বার্তা ইনবক্স (${messages.filter((m) => !m.isRead).length})`, icon: Mail },
-            { id: 'adminAnalytics', label: 'অ্যানালিটিক্স', icon: BarChart3 },
-            { id: 'adminSettings', label: 'সেটিংস ও পাসওয়ার্ড', icon: Key },
+            { id: 'adminDonors', label: 'Donors Directory', icon: Users },
+            { id: 'adminDonations', label: 'Donation Records', icon: FileText },
+            { id: 'adminCertificates', label: 'Certificate Generator', icon: Award },
+            { id: 'adminGallery', label: 'Gallery Management', icon: ImageIcon },
+            {
+              id: 'adminMessages',
+              label: `Inbox (${messages.filter((m) => !m.isRead).length})`,
+              icon: Mail,
+            },
+            { id: 'adminAnalytics', label: 'Analytics', icon: BarChart3 },
+            { id: 'adminSettings', label: 'Settings & Security', icon: Key },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -967,16 +988,22 @@ export default function AdminPage() {
               }}
             >
               <h3 style={{ margin: 0, color: '#1f2937' }}>
-                রক্তদাতা ব্যবস্থাপনা ({toBengali(filteredDonors.length)})
+                Donors Directory ({filteredDonors.length} Total)
               </h3>
               <button
                 onClick={handleOpenAddDonor}
                 type="button"
                 className="submit-btn"
-                style={{ padding: '10px 18px', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '0.9rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
               >
                 <Plus size={16} />
-                <span>নতুন রক্তদাতা যুক্ত করুন</span>
+                <span>Add New Donor</span>
               </button>
             </div>
 
@@ -984,7 +1011,7 @@ export default function AdminPage() {
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
               <input
                 type="text"
-                placeholder="নাম, ফোন নম্বর বা এলাকা দিয়ে খুঁজুন..."
+                placeholder="Search by donor name, phone number, or area..."
                 value={donorSearch}
                 onChange={(e) => setDonorSearch(e.target.value)}
                 style={{
@@ -1006,7 +1033,7 @@ export default function AdminPage() {
                   fontWeight: 600,
                 }}
               >
-                <option value="all">সকল রক্তের গ্রুপ</option>
+                <option value="all">All Blood Groups</option>
                 {VALID_BLOOD_GROUPS.map((bg) => (
                   <option key={bg} value={bg}>
                     {bg}
@@ -1020,13 +1047,13 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '12px 14px' }}>নাম</th>
-                    <th style={{ padding: '12px 14px' }}>মোবাইল নম্বর</th>
-                    <th style={{ padding: '12px 14px' }}>গ্রুপ</th>
-                    <th style={{ padding: '12px 14px' }}>ঠিকানা</th>
-                    <th style={{ padding: '12px 14px' }}>সর্বশেষ দান</th>
-                    <th style={{ padding: '12px 14px' }}>স্ট্যাটাস</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>অ্যাকশন</th>
+                    <th style={{ padding: '12px 14px' }}>Name</th>
+                    <th style={{ padding: '12px 14px' }}>Mobile Number</th>
+                    <th style={{ padding: '12px 14px' }}>Group</th>
+                    <th style={{ padding: '12px 14px' }}>Address</th>
+                    <th style={{ padding: '12px 14px' }}>Last Donation</th>
+                    <th style={{ padding: '12px 14px' }}>Eligibility</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1055,7 +1082,7 @@ export default function AdminPage() {
                         </td>
                         <td style={{ padding: '12px 14px', color: '#4b5563' }}>{donor.address}</td>
                         <td style={{ padding: '12px 14px', color: '#6b7280' }}>
-                          {donor.lastDonation || 'তথ্য নেই'}
+                          {donor.lastDonation || 'None recorded'}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
                           <span
@@ -1068,7 +1095,7 @@ export default function AdminPage() {
                               color: eligibility.isEligible ? '#166534' : '#92400e',
                             }}
                           >
-                            {eligibility.isEligible ? 'প্রস্তুত' : `${eligibility.daysUntilEligible} দিন বাকি`}
+                            {eligibility.isEligible ? 'Eligible' : `Wait (${eligibility.daysUntilEligible}d)`}
                           </span>
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
@@ -1086,7 +1113,7 @@ export default function AdminPage() {
                               fontWeight: 600,
                             }}
                           >
-                            সম্পাদনা
+                            Edit
                           </button>
                           <button
                             onClick={() => handleDeleteDonor(donor.id, donor.name)}
@@ -1101,7 +1128,7 @@ export default function AdminPage() {
                               fontWeight: 600,
                             }}
                           >
-                            মুছুন
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -1110,7 +1137,7 @@ export default function AdminPage() {
                   {filteredDonors.length === 0 && (
                     <tr>
                       <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#9ca3af' }}>
-                        কোনো রক্তদাতা পাওয়া যায়নি।
+                        No donors found matching your criteria.
                       </td>
                     </tr>
                   )}
@@ -1146,7 +1173,7 @@ export default function AdminPage() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: '#DC2626' }}>
-                      {editingDonorId ? 'রক্তদাতার তথ্য সম্পাদনা' : 'নতুন রক্তদাতা যুক্ত করুন'}
+                      {editingDonorId ? 'Edit Donor Information' : 'Add New Donor'}
                     </h3>
                     <button
                       onClick={() => setShowDonorModal(false)}
@@ -1175,25 +1202,27 @@ export default function AdminPage() {
                   <form onSubmit={handleSaveDonor}>
                     <div className="form-grid">
                       <div className="form-group">
-                        <label>পূর্ণ নাম *</label>
+                        <label>Full Name *</label>
                         <input
                           type="text"
                           required
+                          placeholder="e.g. John Doe"
                           value={donorFormData.name}
                           onChange={(e) => setDonorFormData({ ...donorFormData, name: e.target.value })}
                         />
                       </div>
                       <div className="form-group">
-                        <label>মোবাইল নম্বর *</label>
+                        <label>Mobile Number *</label>
                         <input
                           type="tel"
                           required
+                          placeholder="01XXXXXXXXX"
                           value={donorFormData.mobile}
                           onChange={(e) => setDonorFormData({ ...donorFormData, mobile: e.target.value })}
                         />
                       </div>
                       <div className="form-group">
-                        <label>রক্তের গ্রুপ *</label>
+                        <label>Blood Group *</label>
                         <select
                           value={donorFormData.bloodGroup}
                           onChange={(e) => setDonorFormData({ ...donorFormData, bloodGroup: e.target.value })}
@@ -1206,18 +1235,39 @@ export default function AdminPage() {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label>শেষ রক্তদানের তারিখ</label>
+                        <label>Gender (Optional)</label>
+                        <select
+                          value={donorFormData.gender || ''}
+                          onChange={(e) => setDonorFormData({ ...donorFormData, gender: e.target.value })}
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Last Donation Date</label>
                         <input
                           type="date"
                           value={donorFormData.lastDonation || ''}
                           onChange={(e) => setDonorFormData({ ...donorFormData, lastDonation: e.target.value })}
                         />
                       </div>
+                      <div className="form-group">
+                        <label>Date of Birth (Optional)</label>
+                        <input
+                          type="date"
+                          value={donorFormData.dob || ''}
+                          onChange={(e) => setDonorFormData({ ...donorFormData, dob: e.target.value })}
+                        />
+                      </div>
                       <div className="form-group full">
-                        <label>ঠিকানা *</label>
+                        <label>Address *</label>
                         <input
                           type="text"
                           required
+                          placeholder="e.g. Chavali, Chapainawabganj"
                           value={donorFormData.address}
                           onChange={(e) => setDonorFormData({ ...donorFormData, address: e.target.value })}
                         />
@@ -1226,7 +1276,7 @@ export default function AdminPage() {
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                       <button type="submit" className="submit-btn" disabled={savingDonor} style={{ flex: 1 }}>
-                        {savingDonor ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
+                        {savingDonor ? 'Saving Details...' : 'Save Details'}
                       </button>
                       <button
                         type="button"
@@ -1240,7 +1290,7 @@ export default function AdminPage() {
                           fontWeight: 600,
                         }}
                       >
-                        বাতিল
+                        Cancel
                       </button>
                     </div>
                   </form>
@@ -1258,7 +1308,7 @@ export default function AdminPage() {
             {/* Add Donation Form */}
             <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
               <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>
-                {editingDonationId ? 'রক্তদান রেকর্ড সম্পাদনা' : 'নতুন রক্তদান রেকর্ড যুক্ত করুন'}
+                {editingDonationId ? 'Edit Donation Record' : 'Record New Donation'}
               </h3>
 
               {donationFormMsg && (
@@ -1279,27 +1329,27 @@ export default function AdminPage() {
               <form onSubmit={handleSaveDonation}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>রক্তদাতার নাম *</label>
+                    <label>Donor Full Name *</label>
                     <input
                       type="text"
                       required
-                      placeholder="রক্তদাতার নাম"
+                      placeholder="e.g. John Doe"
                       value={donationForm.donorName}
                       onChange={(e) => setDonationForm({ ...donationForm, donorName: e.target.value })}
                     />
                   </div>
                   <div className="form-group">
-                    <label>মোবাইল নম্বর *</label>
+                    <label>Mobile Number *</label>
                     <input
                       type="tel"
                       required
-                      placeholder="০১XXXXXXXXX"
+                      placeholder="01XXXXXXXXX"
                       value={donationForm.donorPhone}
                       onChange={(e) => setDonationForm({ ...donationForm, donorPhone: e.target.value })}
                     />
                   </div>
                   <div className="form-group">
-                    <label>রক্তের গ্রুপ *</label>
+                    <label>Blood Group *</label>
                     <select
                       value={donationForm.bloodGroup}
                       onChange={(e) => setDonationForm({ ...donationForm, bloodGroup: e.target.value })}
@@ -1312,7 +1362,7 @@ export default function AdminPage() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>রক্তদানের তারিখ *</label>
+                    <label>Donation Date *</label>
                     <input
                       type="date"
                       required
@@ -1321,35 +1371,35 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>ডোনেশন আইডি / সিরিয়াল নম্বর *</label>
+                    <label>Donation ID / Serial No. *</label>
                     <input
                       type="text"
                       required
-                      placeholder="যেমন: CBF-2026-001"
+                      placeholder="e.g. CBF-2026-001"
                       value={donationForm.number}
                       onChange={(e) => setDonationForm({ ...donationForm, number: e.target.value })}
                     />
                   </div>
                   <div className="form-group">
-                    <label>রক্তদান কর্মকাণ্ডের ছবি (ঐচ্ছিক)</label>
+                    <label>Activity Photo (Optional)</label>
                     <input type="file" accept="image/*" onChange={handleDonationImageUpload} />
-                    {compressingImg && <span style={{ fontSize: '0.8rem', color: '#DC2626' }}>ছবি কমপ্রেস হচ্ছে...</span>}
+                    {compressingImg && <span style={{ fontSize: '0.8rem', color: '#DC2626' }}>Compressing image...</span>}
                   </div>
                   <div className="form-group full">
-                    <label>রক্তদাতার বর্তমান ঠিকানা *</label>
+                    <label>Donor Address *</label>
                     <input
                       type="text"
                       required
-                      placeholder="গ্রাম/এলাকা, চাঁপাইনবাবগঞ্জ"
+                      placeholder="Village/Area, Chapainawabganj"
                       value={donationForm.donorAddress}
                       onChange={(e) => setDonationForm({ ...donationForm, donorAddress: e.target.value })}
                     />
                   </div>
                   <div className="form-group full">
-                    <label>মন্তব্য / নোট</label>
+                    <label>Notes / Medical Remarks</label>
                     <textarea
                       rows={2}
-                      placeholder="যেমন: সদর হাসপাতালে জরুরি রক্তদান..."
+                      placeholder="e.g. Emergency donation at Sadar Hospital..."
                       value={donationForm.notes || ''}
                       onChange={(e) => setDonationForm({ ...donationForm, notes: e.target.value })}
                       style={{
@@ -1364,7 +1414,7 @@ export default function AdminPage() {
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                   <button type="submit" className="submit-btn" disabled={savingDonation || compressingImg} style={{ flex: 1 }}>
-                    {savingDonation ? 'সংরক্ষণ হচ্ছে...' : editingDonationId ? 'আপডেট করুন' : 'রেকর্ড সংরক্ষণ করুন'}
+                    {savingDonation ? 'Saving Record...' : editingDonationId ? 'Update Record' : 'Save Record'}
                   </button>
                   {editingDonationId && (
                     <button
@@ -1390,7 +1440,7 @@ export default function AdminPage() {
                         cursor: 'pointer',
                       }}
                     >
-                      বাতিল
+                      Cancel
                     </button>
                   )}
                 </div>
@@ -1400,7 +1450,7 @@ export default function AdminPage() {
             {/* Donation Records List */}
             <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
               <h3 style={{ color: '#1f2937', marginBottom: '16px' }}>
-                সাম্প্রতিক রক্তদান তালিকা ({toBengali(donations.length)})
+                Donation History ({donations.length} Records)
               </h3>
 
               <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
@@ -1456,7 +1506,7 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-                        তারিখ: {d.date} | ID: {d.number}
+                        Date: {d.date} | ID: {d.number}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{d.donorAddress}</div>
                     </div>
@@ -1475,7 +1525,7 @@ export default function AdminPage() {
                           fontWeight: 600,
                         }}
                       >
-                        সম্পাদনা
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDeleteDonation(d.id)}
@@ -1491,14 +1541,14 @@ export default function AdminPage() {
                           fontWeight: 600,
                         }}
                       >
-                        মুছুন
+                        Delete
                       </button>
                     </div>
                   </div>
                 ))}
                 {donations.length === 0 && (
                   <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                    এখনও কোনো রক্তদান রেকর্ড নেই।
+                    No donation records found.
                   </p>
                 )}
               </div>
@@ -1513,11 +1563,11 @@ export default function AdminPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
             {/* Left form controls */}
             <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>প্রশংসাপত্র প্রস্তুত করুন</h3>
+              <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>Certificate Generator</h3>
 
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-                  রক্তদান রেকর্ড থেকে নির্বাচন করুন (স্বয়ংক্রিয় পূরণ)
+                  Auto-fill from Donation Record
                 </label>
                 <select
                   onChange={(e) => handleSelectDonationForCert(e.target.value)}
@@ -1528,7 +1578,7 @@ export default function AdminPage() {
                     border: '1px solid #d1d5db',
                   }}
                 >
-                  <option value="">-- রক্তদান রেকর্ড বেছে নিন --</option>
+                  <option value="">-- Choose a donation record --</option>
                   {donations.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.donorName} ({d.bloodGroup}) - {d.date}
@@ -1539,17 +1589,17 @@ export default function AdminPage() {
 
               <div className="form-grid">
                 <div className="form-group">
-                  <label>রক্তদাতার নাম *</label>
+                  <label>Donor Name *</label>
                   <input
                     type="text"
                     required
                     value={certDonorName}
                     onChange={(e) => setCertDonorName(e.target.value)}
-                    placeholder="রক্তদাতার নাম"
+                    placeholder="Donor's Full Name"
                   />
                 </div>
                 <div className="form-group">
-                  <label>রক্তের গ্রুপ *</label>
+                  <label>Blood Group *</label>
                   <select value={certBloodGroup} onChange={(e) => setCertBloodGroup(e.target.value)}>
                     {VALID_BLOOD_GROUPS.map((bg) => (
                       <option key={bg} value={bg}>
@@ -1559,22 +1609,22 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>রক্তদানের তারিখ *</label>
+                  <label>Donation Date *</label>
                   <input type="date" required value={certDate} onChange={(e) => setCertDate(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>সার্টিফিকেট / ডোনেশন আইডি</label>
+                  <label>Certificate / Donation ID</label>
                   <input
                     type="text"
                     value={certNumber}
                     onChange={(e) => setCertNumber(e.target.value)}
-                    placeholder="যেমন: CBF-2026-001"
+                    placeholder="e.g. CBF-2026-001"
                   />
                 </div>
                 <div className="form-group full">
-                  <label>প্রশংসাপত্র বার্তা</label>
+                  <label>Certificate Citation / Message</label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={certMessageText}
                     onChange={(e) => setCertMessageText(e.target.value)}
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
@@ -1603,19 +1653,34 @@ export default function AdminPage() {
                   onClick={handleSaveCertificate}
                   className="submit-btn"
                   disabled={certLoading}
-                  style={{ flex: 1, minWidth: '160px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  style={{
+                    flex: 1,
+                    minWidth: '160px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
                 >
                   <Save size={16} />
-                  <span>{certLoading ? 'সংরক্ষণ হচ্ছে...' : 'ডেটাবেসে সংরক্ষণ করুন'}</span>
+                  <span>{certLoading ? 'Saving...' : 'Save to Database'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDownloadCert}
                   className="submit-btn"
-                  style={{ background: '#2563eb', flex: 1, minWidth: '160px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  style={{
+                    background: '#2563eb',
+                    flex: 1,
+                    minWidth: '160px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
                 >
                   <Download size={16} />
-                  <span>ডাউনলোড (PNG)</span>
+                  <span>Download (PNG)</span>
                 </button>
               </div>
 
@@ -1624,9 +1689,17 @@ export default function AdminPage() {
                   <Link
                     href={`/certificates/${savedCertId}`}
                     target="_blank"
-                    style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 600, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    style={{
+                      color: '#2563eb',
+                      textDecoration: 'underline',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
                   >
-                    <span>পাবলিক সার্টিফিকেট পেজ ওপেন করুন</span>
+                    <span>Open Public Certificate Page</span>
                     <ExternalLink size={14} />
                   </Link>
                 </div>
@@ -1635,7 +1708,7 @@ export default function AdminPage() {
 
             {/* Right preview canvas */}
             <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ color: '#1f2937', marginBottom: '14px' }}>লাইভ সার্টিফিকেট প্রিভিউ</h3>
+              <h3 style={{ color: '#1f2937', marginBottom: '14px' }}>Live Certificate Preview</h3>
 
               <div
                 ref={certRef}
@@ -1657,25 +1730,24 @@ export default function AdminPage() {
                       e.currentTarget.style.display = 'none';
                     }}
                   />
-                  <h4 style={{ color: '#DC2626', margin: 0, fontSize: '1.4rem' }}>চাঁভালি রক্ত ফাউন্ডেশন</h4>
+                  <h4 style={{ color: '#DC2626', margin: 0, fontSize: '1.4rem' }}>Chavali Blood Foundation</h4>
                 </div>
                 <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: '4px 0 14px 0' }}>
-                  রক্তের বন্ধনে, চাঁভালি সবখানে
+                  Serving Humanity with Every Drop
                 </p>
 
                 <div style={{ margin: '10px auto', borderBottom: '2px solid #DC2626', width: '60px' }}></div>
 
                 <h5 style={{ fontSize: '1.2rem', color: '#1f2937', margin: '10px 0', fontWeight: 700 }}>
-                  স্বেচ্ছায় রক্তদান প্রশংসাপত্র
+                  Certificate of Appreciation
                 </h5>
 
                 <p style={{ fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.8', margin: '14px 0' }}>
-                  পরম শ্রদ্ধার সাথে প্রত্যয়ন করা যাচ্ছে যে,{' '}
+                  Presented with highest gratitude to{' '}
                   <strong style={{ color: '#DC2626', fontSize: '1.15rem' }}>
-                    {certDonorName || 'রক্তদাতার নাম'}
+                    {certDonorName || '[Donor Name]'}
                   </strong>{' '}
-                  চাঁভালি রক্ত ফাউন্ডেশনের মাধ্যমে মানবসেবায় স্বেচ্ছায় রক্তদান করে একটি অমূল্য প্রাণ রক্ষায় অনন্য ভূমিকা
-                  রেখেছেন।
+                  for voluntarily donating blood through Chavali Blood Foundation to help save an invaluable human life.
                 </p>
 
                 <div
@@ -1689,17 +1761,17 @@ export default function AdminPage() {
                   }}
                 >
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>রক্তের গ্রুপ</span>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Blood Group</span>
                     <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#DC2626' }}>
                       {certBloodGroup}
                     </div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>তারিখ</span>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Date</span>
                     <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1f2937' }}>{certDate}</div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>আইডি</span>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Certificate ID</span>
                     <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1f2937' }}>
                       {certNumber || 'CBF-2026'}
                     </div>
@@ -1717,11 +1789,11 @@ export default function AdminPage() {
                 >
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ borderBottom: '1px solid #9ca3af', width: '100px', marginBottom: '4px' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: '#4b5563' }}>সাধারণ সম্পাদক</span>
+                    <span style={{ fontSize: '0.75rem', color: '#4b5563' }}>General Secretary</span>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ borderBottom: '1px solid #9ca3af', width: '100px', marginBottom: '4px' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: '#4b5563' }}>সভাপতি</span>
+                    <span style={{ fontSize: '0.75rem', color: '#4b5563' }}>President</span>
                   </div>
                 </div>
               </div>
@@ -1734,28 +1806,28 @@ export default function AdminPage() {
         {/* ========================================================================= */}
         {activeTab === 'adminGallery' && (
           <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>গ্যালারি ফটো আপলোড ও ব্যবস্থাপনা</h3>
+            <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>Gallery Photos & Uploads</h3>
 
             <form onSubmit={handleSaveGallery} style={{ maxWidth: '600px', marginBottom: '30px' }}>
               <div className="form-grid">
                 <div className="form-group full">
-                  <label>ছবির শিরোনাম / ক্যাপশন</label>
+                  <label>Photo Title / Caption</label>
                   <input
                     type="text"
-                    placeholder="যেমন: ফ্রি ব্লাড গ্রুপিং ক্যাম্প ২০২৬"
+                    placeholder="e.g. Free Blood Grouping Campaign 2026"
                     value={galleryCaption}
                     onChange={(e) => setGalleryCaption(e.target.value)}
                   />
                 </div>
                 <div className="form-group">
-                  <label>ক্যাটাগরি</label>
+                  <label>Category</label>
                   <select value={galleryCategory} onChange={(e) => setGalleryCategory(e.target.value)}>
-                    <option value="general">ক্যাম্পেইন ও সমাবেশ (general)</option>
-                    <option value="donation">রক্তদান কার্যক্রম (donation)</option>
+                    <option value="general">Campaigns & Assemblies (General)</option>
+                    <option value="donation">Donation Activities (Donation)</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>ছবি নির্বাচন করুন *</label>
+                  <label>Select Photo File *</label>
                   <input type="file" accept="image/*" required onChange={handleGalleryImageUpload} />
                 </div>
               </div>
@@ -1783,12 +1855,12 @@ export default function AdminPage() {
                 style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 <Upload size={16} />
-                <span>{uploadingGallery ? 'আপলোড হচ্ছে...' : 'ছবি আপলোড করুন'}</span>
+                <span>{uploadingGallery ? 'Uploading Photo...' : 'Upload Photo'}</span>
               </button>
             </form>
 
             <h4 style={{ color: '#1f2937', marginBottom: '14px' }}>
-              বর্তমান ছবি তালিকা ({toBengali(gallery.length)})
+              Current Gallery Photos ({gallery.length} Total)
             </h4>
 
             <div
@@ -1811,7 +1883,7 @@ export default function AdminPage() {
                 >
                   <img
                     src={img.data || img.imageData}
-                    alt={img.caption || 'Gallery'}
+                    alt={img.caption || 'Gallery Photo'}
                     style={{ width: '100%', height: '140px', objectFit: 'cover' }}
                   />
                   <div style={{ padding: '10px' }}>
@@ -1825,9 +1897,11 @@ export default function AdminPage() {
                         textOverflow: 'ellipsis',
                       }}
                     >
-                      {img.caption || 'ক্যাপশন নেই'}
+                      {img.caption || 'Untitled Photo'}
                     </p>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{img.category}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'capitalize' }}>
+                      {img.category}
+                    </span>
                     <button
                       onClick={() => handleDeleteGalleryItem(img.id)}
                       type="button"
@@ -1844,11 +1918,16 @@ export default function AdminPage() {
                         fontWeight: 600,
                       }}
                     >
-                      মুছুন
+                      Delete
                     </button>
                   </div>
                 </div>
               ))}
+              {gallery.length === 0 && (
+                <p style={{ color: '#9ca3af', gridColumn: '1 / -1', padding: '20px 0' }}>
+                  No photos uploaded to gallery yet.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -1859,7 +1938,7 @@ export default function AdminPage() {
         {activeTab === 'adminMessages' && (
           <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
             <h3 style={{ color: '#1f2937', marginBottom: '16px' }}>
-              যোগাযোগ বার্তা ইনবক্স ({toBengali(messages.length)})
+              Contact Messages Inbox ({messages.length} Messages)
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1895,7 +1974,7 @@ export default function AdminPage() {
                               borderRadius: '10px',
                             }}
                           >
-                            নতুন
+                            New
                           </span>
                         )}
                       </h4>
@@ -1927,7 +2006,7 @@ export default function AdminPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {msg.isRead ? 'পড়া হিসেবে চিহ্নিত' : 'পড়া হয়েছে'}
+                        {msg.isRead ? 'Mark as Unread' : 'Mark as Read'}
                       </button>
                       <button
                         onClick={() => handleDeleteMessage(msg.id)}
@@ -1943,14 +2022,14 @@ export default function AdminPage() {
                           fontWeight: 600,
                         }}
                       >
-                        মুছুন
+                        Delete
                       </button>
                     </div>
                   </div>
 
                   {msg.subject && (
                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginTop: '10px' }}>
-                      বিষয়: {msg.subject}
+                      Subject: {msg.subject}
                     </div>
                   )}
 
@@ -1960,7 +2039,7 @@ export default function AdminPage() {
                 </div>
               ))}
               {messages.length === 0 && (
-                <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>কোনো বার্তা নেই।</p>
+                <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No messages in inbox.</p>
               )}
             </div>
           </div>
@@ -1971,7 +2050,7 @@ export default function AdminPage() {
         {/* ========================================================================= */}
         {activeTab === 'adminAnalytics' && (
           <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#1f2937', marginBottom: '20px' }}>রক্তের গ্রুপ ও ডেটাবেস পরিসংখ্যান</h3>
+            <h3 style={{ color: '#1f2937', marginBottom: '20px' }}>Blood Group Distribution & Analytics</h3>
 
             <div
               style={{
@@ -2001,7 +2080,7 @@ export default function AdminPage() {
                       <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{percent}%</span>
                     </div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '8px', color: '#1f2937' }}>
-                      {toBengali(count)} জন
+                      {count} Donors
                     </div>
                     <div
                       style={{
@@ -2028,7 +2107,7 @@ export default function AdminPage() {
         {/* ========================================================================= */}
         {activeTab === 'adminSettings' && (
           <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>এডমিন পাসওয়ার্ড পরিবর্তন</h3>
+            <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>Change Admin Password</h3>
 
             {pwdMsg && (
               <div
@@ -2048,11 +2127,12 @@ export default function AdminPage() {
             <form onSubmit={handleChangePassword} style={{ maxWidth: '440px' }}>
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
-                  বর্তমান পাসওয়ার্ড *
+                  Current Password *
                 </label>
                 <input
                   type="password"
                   required
+                  placeholder="Enter current password"
                   value={pwdForm.currentPassword}
                   onChange={(e) => setPwdForm({ ...pwdForm, currentPassword: e.target.value })}
                   style={{
@@ -2066,11 +2146,12 @@ export default function AdminPage() {
 
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
-                  নতুন পাসওয়ার্ড *
+                  New Password *
                 </label>
                 <input
                   type="password"
                   required
+                  placeholder="Enter new secure password"
                   value={pwdForm.newPassword}
                   onChange={(e) => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
                   style={{
@@ -2084,11 +2165,12 @@ export default function AdminPage() {
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
-                  নতুন পাসওয়ার্ড নিশ্চিত করুন *
+                  Confirm New Password *
                 </label>
                 <input
                   type="password"
                   required
+                  placeholder="Confirm new password"
                   value={pwdForm.confirmPassword}
                   onChange={(e) => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
                   style={{
@@ -2101,7 +2183,7 @@ export default function AdminPage() {
               </div>
 
               <button type="submit" className="submit-btn" disabled={savingPwd}>
-                {savingPwd ? 'সংরক্ষণ হচ্ছে...' : 'পাসওয়ার্ড পরিবর্তন করুন'}
+                {savingPwd ? 'Updating Password...' : 'Update Password'}
               </button>
             </form>
           </div>
