@@ -32,7 +32,7 @@ import {
   Calendar,
   MapPin,
   Plus,
-  Edit,
+  Edit2,
   Trash2,
   Download,
   Save,
@@ -44,6 +44,13 @@ import {
   Droplet,
   ChevronRight,
   ShieldCheck,
+  RefreshCw,
+  Search,
+  Eye,
+  EyeOff,
+  UserCheck,
+  Send,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 type AdminTab =
@@ -54,6 +61,20 @@ type AdminTab =
   | 'adminMessages'
   | 'adminAnalytics'
   | 'adminSettings';
+
+interface NavItem {
+  id: AdminTab;
+  label: string;
+  icon: any;
+  count?: number;
+  badge?: number;
+}
+
+interface NavGroup {
+  group: string;
+  items: NavItem[];
+}
+
 
 export default function AdminPage() {
   // Auth state
@@ -67,6 +88,7 @@ export default function AdminPage() {
   // Sidebar & Active tab
   const [activeTab, setActiveTab] = useState<AdminTab>('adminDonors');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Data states
   const [stats, setStats] = useState<StatsData>({
@@ -148,88 +170,118 @@ export default function AdminPage() {
   const [pwdMsg, setPwdMsg] = useState<string | null>(null);
   const [savingPwd, setSavingPwd] = useState<boolean>(false);
 
-  // Initial session check
+  // 1. Initial auth check
   useEffect(() => {
-    const savedToken =
-      localStorage.getItem('chavali_admin_token') || sessionStorage.getItem('chavali_admin_token');
+    const savedToken = localStorage.getItem('cbf_admin_token');
     if (savedToken) {
       setToken(savedToken);
-      setIsLoggedIn(true);
+      verifyToken(savedToken);
     }
   }, []);
 
-  // Load data when logged in
+  // 2. Fetch all data upon login
   useEffect(() => {
-    if (!isLoggedIn) return;
-    fetchAllData();
-  }, [isLoggedIn, token]);
-
-  const getHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'x-admin-auth': 'admin',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (isLoggedIn) {
+      fetchAllData();
     }
-    return headers;
+  }, [isLoggedIn]);
+
+  const verifyToken = async (jwtToken: string) => {
+    try {
+      const res = await fetch('/api/auth/verify', {
+        headers: { Authorization: `Bearer ${jwtToken}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsLoggedIn(true);
+      } else {
+        localStorage.removeItem('cbf_admin_token');
+        setToken(null);
+        setIsLoggedIn(false);
+      }
+    } catch {
+      localStorage.removeItem('cbf_admin_token');
+      setToken(null);
+      setIsLoggedIn(false);
+    }
   };
 
   const fetchAllData = async () => {
-    fetch('/api/health')
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.database) setDbStatus(d.database);
-      })
-      .catch(() => {});
+    setRefreshing(true);
+    const headers = getHeaders();
 
-    fetch('/api/stats')
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.stats) setStats(d.stats);
-      })
-      .catch(() => {});
+    try {
+      // 1. Check health
+      fetch('/api/health')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.db) setDbStatus(d.db);
+        })
+        .catch(() => {});
 
-    fetch('/api/donors')
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.success && Array.isArray(d.data)) setDonors(d.data);
-      })
-      .catch(() => {});
+      // 2. Stats
+      fetch('/api/stats')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.stats) setStats(d.stats);
+        })
+        .catch(() => {});
 
-    fetch('/api/donations')
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.success && Array.isArray(d.data)) setDonations(d.data);
-      })
-      .catch(() => {});
+      // 3. Donors (authorized)
+      fetch('/api/donors', { headers })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.data)) setDonors(d.data);
+        })
+        .catch(() => {});
 
-    fetch('/api/gallery')
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.success && Array.isArray(d.data)) setGallery(d.data);
-      })
-      .catch(() => {});
+      // 4. Donations (authorized)
+      fetch('/api/donations', { headers })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.data)) setDonations(d.data);
+        })
+        .catch(() => {});
 
-    fetch('/api/certificates', { headers: getHeaders() })
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.success && Array.isArray(d.data)) setCertificates(d.data);
-      })
-      .catch(() => {});
+      // 5. Gallery
+      fetch('/api/gallery')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.data)) setGallery(d.data);
+        })
+        .catch(() => {});
 
-    fetch('/api/contact', { headers: getHeaders() })
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.success && Array.isArray(d.data)) setMessages(d.data);
-      })
-      .catch(() => {});
+      // 6. Certificates (authorized)
+      fetch('/api/certificates', { headers })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.data)) setCertificates(d.data);
+        })
+        .catch(() => {});
+
+      // 7. Messages (authorized)
+      fetch('/api/contact', { headers })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.data)) setMessages(d.data);
+        })
+        .catch(() => {});
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
+  };
+
+  const getHeaders = () => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const curToken = token || localStorage.getItem('cbf_admin_token');
+    if (curToken) headers['Authorization'] = `Bearer ${curToken}`;
+    return headers;
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoadingLogin(true);
     setLoginMessage(null);
+    setLoadingLogin(true);
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -237,27 +289,28 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginForm),
       });
-      const data = await res.json();
 
+      const data = await res.json();
       if (res.ok && data.success && data.token) {
+        localStorage.setItem('cbf_admin_token', data.token);
         setToken(data.token);
         setIsLoggedIn(true);
-        localStorage.setItem('chavali_admin_token', data.token);
+        setLoginForm({ username: '', password: '' });
       } else {
         setLoginMessage(data.message || 'Invalid username or password.');
       }
     } catch {
-      setLoginMessage('Could not connect to authentication server.');
+      setLoginMessage('Network error occurred while connecting to the server.');
     } finally {
       setLoadingLogin(false);
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('cbf_admin_token');
     setToken(null);
     setIsLoggedIn(false);
-    localStorage.removeItem('chavali_admin_token');
-    sessionStorage.removeItem('chavali_admin_token');
+    setSidebarOpen(false);
   };
 
   const handleNavClick = (tabId: AdminTab) => {
@@ -265,6 +318,7 @@ export default function AdminPage() {
     setSidebarOpen(false);
   };
 
+  // Donor handlers
   const handleOpenAddDonor = () => {
     setEditingDonorId(null);
     setDonorFormData({
@@ -309,26 +363,27 @@ export default function AdminPage() {
         headers: getHeaders(),
         body: JSON.stringify(donorFormData),
       });
-      const data = await res.json();
 
+      const data = await res.json();
       if (res.ok && data.success) {
-        setDonorFormMsg('Donor details saved successfully!');
+        setDonorFormMsg(editingDonorId ? 'Donor updated successfully!' : 'Donor added successfully!');
         fetchAllData();
         setTimeout(() => {
           setShowDonorModal(false);
-        }, 1000);
+          setDonorFormMsg(null);
+        }, 800);
       } else {
-        setDonorFormMsg(data.message || 'Failed to save donor details.');
+        setDonorFormMsg(data.message || 'Operation failed.');
       }
     } catch {
-      setDonorFormMsg('Network error while saving donor.');
+      setDonorFormMsg('Network error occurred.');
     } finally {
       setSavingDonor(false);
     }
   };
 
   const handleDeleteDonor = async (id: string | number, name: string) => {
-    if (!confirm(`Are you sure you want to permanently delete donor "${name}"?`)) return;
+    if (!confirm(`Are you sure you want to delete donor "${name}" from the database?`)) return;
 
     try {
       const res = await fetch(`/api/donors/${id}`, {
@@ -346,16 +401,16 @@ export default function AdminPage() {
     }
   };
 
+  // Donation handlers
   const handleDonationImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setCompressingImg(true);
     try {
-      const compressedBase64 = await compressImage(file, 1200, 1200, 0.82);
-      setDonationForm((prev) => ({ ...prev, image: compressedBase64 }));
+      setCompressingImg(true);
+      const base64 = await compressImage(file, 800, 800, 0.8);
+      setDonationForm({ ...donationForm, image: base64 });
     } catch (err: any) {
-      alert('Image processing error: ' + err?.message);
+      alert('Image compression failed: ' + err?.message);
     } finally {
       setCompressingImg(false);
     }
@@ -375,10 +430,14 @@ export default function AdminPage() {
         headers: getHeaders(),
         body: JSON.stringify(donationForm),
       });
-      const data = await res.json();
 
+      const data = await res.json();
       if (res.ok && data.success) {
-        setDonationFormMsg('Donation record saved successfully!');
+        setDonationFormMsg(
+          editingDonationId ? 'Donation record updated successfully!' : 'Donation record added successfully!'
+        );
+        fetchAllData();
+        setEditingDonationId(null);
         setDonationForm({
           donorName: '',
           donorPhone: '',
@@ -389,36 +448,33 @@ export default function AdminPage() {
           image: null,
           notes: '',
         });
-        setEditingDonationId(null);
-        fetchAllData();
       } else {
-        setDonationFormMsg(data.message || 'Could not save donation record.');
+        setDonationFormMsg(data.message || 'Operation failed.');
       }
     } catch {
-      setDonationFormMsg('Network error while saving donation record.');
+      setDonationFormMsg('Network error occurred.');
     } finally {
       setSavingDonation(false);
     }
   };
 
-  const handleEditDonation = (donation: Donation) => {
-    setEditingDonationId(donation.id);
+  const handleEditDonation = (d: Donation) => {
+    setEditingDonationId(d.id);
     setDonationForm({
-      donorName: donation.donorName,
-      donorPhone: donation.donorPhone,
-      donorAddress: donation.donorAddress,
-      number: donation.number,
-      bloodGroup: donation.bloodGroup,
-      date: donation.date,
-      image: donation.image || null,
-      notes: donation.notes || '',
+      donorName: d.donorName,
+      donorPhone: d.donorPhone,
+      donorAddress: d.donorAddress,
+      number: d.number,
+      bloodGroup: d.bloodGroup,
+      date: d.date,
+      image: d.image || null,
+      notes: d.notes || '',
     });
-    window.scrollTo({ top: 300, behavior: 'smooth' });
+    setDonationFormMsg(null);
   };
 
   const handleDeleteDonation = async (id: string | number) => {
-    if (!confirm('Are you sure you want to permanently delete this donation record?')) return;
-
+    if (!confirm('Are you sure you want to delete this donation record?')) return;
     try {
       const res = await fetch(`/api/donations/${id}`, {
         method: 'DELETE',
@@ -638,99 +694,131 @@ export default function AdminPage() {
     return matchGroup && matchQuery;
   });
 
-  const navMenuItems = [
-    { id: 'adminDonors' as AdminTab, label: 'Donors Directory', icon: Users, count: donors.length },
-    { id: 'adminDonations' as AdminTab, label: 'Donation Records', icon: FileText, count: donations.length },
-    { id: 'adminCertificates' as AdminTab, label: 'Certificate Generator', icon: Award, count: certificates.length },
-    { id: 'adminGallery' as AdminTab, label: 'Gallery Management', icon: ImageIcon, count: gallery.length },
+  const navMenuItems: NavGroup[] = [
     {
-      id: 'adminMessages' as AdminTab,
-      label: 'Messages Inbox',
-      icon: Mail,
-      badge: messages.filter((m) => !m.isRead).length,
+      group: 'MANAGEMENT',
+      items: [
+        { id: 'adminDonors', label: 'Donors Directory', icon: Users, count: donors.length },
+        { id: 'adminDonations', label: 'Donation Records', icon: FileText, count: donations.length },
+        { id: 'adminCertificates', label: 'Certificate Generator', icon: Award, count: certificates.length },
+        { id: 'adminGallery', label: 'Gallery Management', icon: ImageIcon, count: gallery.length },
+      ],
     },
-    { id: 'adminAnalytics' as AdminTab, label: 'Analytics', icon: BarChart3 },
-    { id: 'adminSettings' as AdminTab, label: 'Settings & Security', icon: Key },
+    {
+      group: 'ENGAGEMENT',
+      items: [
+        {
+          id: 'adminMessages',
+          label: 'Messages Inbox',
+          icon: Mail,
+          badge: messages.filter((m) => !m.isRead).length,
+        },
+      ],
+    },
+    {
+      group: 'INSIGHTS & SYSTEM',
+      items: [
+        { id: 'adminAnalytics', label: 'Analytics & Reports', icon: BarChart3 },
+        { id: 'adminSettings', label: 'Settings & Security', icon: Key },
+      ],
+    },
   ];
 
   // ----------------------------------------------------------------------------
-  // LOGIN SCREEN (ENGLISH)
+  // CLEAN MODERN LOGIN SCREEN
   // ----------------------------------------------------------------------------
   if (!isLoggedIn) {
     return (
-      <section className="admin-login-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-        <div style={{ maxWidth: '440px', width: '100%', margin: '0 auto' }}>
+      <section className="admin-login-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '420px', width: '100%', margin: '0 auto' }}>
           <div
+            className="admin-card"
             style={{
-              background: '#ffffff',
-              padding: '40px 30px',
-              borderRadius: '20px',
-              boxShadow: 'var(--shadow-xl)',
-              border: '1px solid rgba(220, 38, 38, 0.15)',
+              padding: '40px 32px',
               textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
             }}
           >
             <div
               style={{
                 display: 'inline-flex',
-                padding: '16px',
-                background: '#fee2e2',
-                borderRadius: '50%',
-                color: '#DC2626',
-                marginBottom: '16px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '64px',
+                height: '64px',
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                borderRadius: '18px',
+                color: '#dc2626',
+                marginBottom: '20px',
+                boxShadow: '0 8px 16px -4px rgba(220, 38, 38, 0.25)',
               }}
             >
-              <Lock size={36} />
+              <Droplet size={32} fill="#dc2626" />
             </div>
-            <h2 style={{ color: '#DC2626', marginBottom: '6px' }}>Admin Portal Login</h2>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '24px' }}>
-              Chavali Blood Foundation Database & Management Dashboard
+
+            <h2 style={{ color: '#0f172a', fontSize: '1.45rem', fontWeight: 800, marginBottom: '6px' }}>
+              Admin Portal
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.88rem', marginBottom: '28px', lineHeight: 1.5 }}>
+              Sign in to manage donors, donations, and blood foundation records
             </p>
 
             {loginMessage && (
               <div
                 style={{
-                  padding: '12px',
-                  background: '#fee2e2',
+                  padding: '12px 16px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
                   color: '#991b1b',
-                  borderRadius: '10px',
-                  marginBottom: '20px',
-                  fontSize: '0.9rem',
+                  borderRadius: '12px',
+                  marginBottom: '22px',
+                  fontSize: '0.88rem',
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
+                  textAlign: 'left',
                 }}
               >
-                <AlertCircle size={16} />
+                <AlertCircle size={18} style={{ flexShrink: 0 }} />
                 <span>{loginMessage}</span>
               </div>
             )}
 
             <form onSubmit={handleLogin} style={{ textAlign: 'left' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Username
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Enter username"
+                  placeholder="Enter admin username"
                   value={loginForm.username}
                   onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    borderRadius: '10px',
-                    border: '2px solid #e5e7eb',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
                     outline: 'none',
-                    fontSize: '1rem',
+                    fontSize: '0.95rem',
+                    background: '#f8fafc',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#dc2626';
+                    e.currentTarget.style.background = '#ffffff';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                    e.currentTarget.style.background = '#f8fafc';
                   }}
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Password
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -742,11 +830,21 @@ export default function AdminPage() {
                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: '10px',
-                      border: '2px solid #e5e7eb',
+                      padding: '12px 42px 12px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid #cbd5e1',
                       outline: 'none',
-                      fontSize: '1rem',
+                      fontSize: '0.95rem',
+                      background: '#f8fafc',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#dc2626';
+                      e.currentTarget.style.background = '#ffffff';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.background = '#f8fafc';
                     }}
                   />
                   <button
@@ -760,33 +858,62 @@ export default function AdminPage() {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      color: '#6b7280',
-                      fontWeight: 600,
+                      color: '#94a3b8',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="submit-btn"
                 disabled={loadingLogin}
                 style={{
                   width: '100%',
-                  padding: '14px',
+                  padding: '13px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+                  transition: 'all 0.2s ease',
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#b91c1c')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#dc2626')}
               >
                 <Lock size={16} />
-                <span>{loadingLogin ? 'Signing In...' : 'Sign In'}</span>
+                <span>{loadingLogin ? 'Signing In...' : 'Sign In to Dashboard'}</span>
               </button>
             </form>
+
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
+              <Link
+                href="/"
+                style={{
+                  color: '#64748b',
+                  fontSize: '0.85rem',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+              >
+                <Globe size={14} />
+                <span>Back to Live Website</span>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -794,8 +921,11 @@ export default function AdminPage() {
   }
 
   // ----------------------------------------------------------------------------
-  // LOGGED-IN ADMIN DASHBOARD (RESPONSIVE SIDEBAR LAYOUT)
+  // CLEAN MODERN LOGGED-IN ADMIN DASHBOARD
   // ----------------------------------------------------------------------------
+  const activeNavLabel =
+    navMenuItems.flatMap((g) => g.items).find((m) => m.id === activeTab)?.label || 'Dashboard';
+
   return (
     <div className="admin-shell">
       {/* Mobile Top Header */}
@@ -806,22 +936,33 @@ export default function AdminPage() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#1f2937',
+            color: '#1e293b',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             padding: '6px',
           }}
-          aria-label="Open sidebar navigation"
+          aria-label="Open sidebar"
         >
-          <Menu size={24} />
+          <Menu size={22} />
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#DC2626', display: 'flex' }}>
-            <Droplet size={20} fill="#DC2626" />
-          </span>
-          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1f2937' }}>Chavali Admin</span>
+          <div
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
+              background: '#fee2e2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#dc2626',
+            }}
+          >
+            <Droplet size={16} fill="#dc2626" />
+          </div>
+          <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>Chavali Admin</span>
         </div>
 
         <button
@@ -829,7 +970,7 @@ export default function AdminPage() {
           onClick={handleLogout}
           style={{
             background: '#fee2e2',
-            border: '1px solid #fecaca',
+            border: 'none',
             color: '#991b1b',
             borderRadius: '8px',
             padding: '6px 10px',
@@ -854,38 +995,39 @@ export default function AdminPage() {
         role="presentation"
       ></div>
 
-      {/* Sidebar Navigation */}
+      {/* Modern Sidebar Navigation */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        {/* Sidebar Brand / Header */}
+        {/* Sidebar Brand */}
         <div
           style={{
-            padding: '20px',
-            borderBottom: '1px solid #e2e8f0',
+            padding: '22px 20px',
+            borderBottom: '1px solid #f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: '#fee2e2',
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#DC2626',
+                color: '#ffffff',
+                boxShadow: '0 4px 10px rgba(220, 38, 38, 0.3)',
               }}
             >
-              <Droplet size={22} fill="#DC2626" />
+              <Droplet size={22} fill="#ffffff" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
                 Chavali Admin
               </h3>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Blood Foundation Panel</span>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Blood Foundation Panel</span>
             </div>
           </div>
 
@@ -896,7 +1038,7 @@ export default function AdminPage() {
               display: 'none',
               background: 'none',
               border: 'none',
-              color: '#64748b',
+              color: '#94a3b8',
               cursor: 'pointer',
               padding: '4px',
             }}
@@ -906,145 +1048,178 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Database Status Indicator */}
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              style={{
-                display: 'inline-block',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: dbStatus.connected ? '#10b981' : '#f59e0b',
-                boxShadow: dbStatus.connected ? '0 0 0 3px rgba(16, 185, 129, 0.2)' : 'none',
-              }}
-            ></span>
-            <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
-              {dbStatus.connected ? `Neon PostgreSQL (${dbStatus.latencyMs}ms)` : 'Database Offline'}
-            </span>
+        {/* Database Status Indicator Pill */}
+        <div style={{ padding: '12px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="pulse-dot" style={{ background: dbStatus.connected ? '#10b981' : '#f59e0b' }}></span>
+              <span style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 700 }}>
+                {dbStatus.connected ? 'PostgreSQL Active' : 'Database Offline'}
+              </span>
+            </div>
+            {dbStatus.latencyMs !== undefined && (
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
+                {dbStatus.latencyMs}ms
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Sidebar Nav Items List */}
-        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {navMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleNavClick(item.id)}
+        {/* Categorized Nav Items */}
+        <nav style={{ flex: 1, padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {navMenuItems.map((group, gIdx) => (
+            <div key={gIdx}>
+              <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: isActive ? '#fee2e2' : 'transparent',
-                  color: isActive ? '#991b1b' : '#475569',
-                  fontWeight: isActive ? 700 : 600,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.background = '#f1f5f9';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.background = 'transparent';
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  color: '#94a3b8',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  padding: '0 8px',
+                  marginBottom: '8px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Icon size={18} color={isActive ? '#DC2626' : '#64748b'} />
-                  <span>{item.label}</span>
-                </div>
+                {group.group}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
 
-                {/* Badge/Count */}
-                {item.badge !== undefined && item.badge > 0 ? (
-                  <span
-                    style={{
-                      background: '#DC2626',
-                      color: '#ffffff',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                    }}
-                  >
-                    {item.badge}
-                  </span>
-                ) : item.count !== undefined ? (
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      color: isActive ? '#991b1b' : '#94a3b8',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {item.count}
-                  </span>
-                ) : (
-                  <ChevronRight size={14} color={isActive ? '#DC2626' : '#cbd5e1'} />
-                )}
-              </button>
-            );
-          })}
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleNavClick(item.id)}
+                      className={`admin-nav-item ${isActive ? 'active' : ''}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Icon size={18} className="nav-icon" color={isActive ? '#dc2626' : '#64748b'} />
+                        <span>{item.label}</span>
+                      </div>
+
+                      {item.badge !== undefined && item.badge > 0 ? (
+                        <span
+                          style={{
+                            background: '#dc2626',
+                            color: '#ffffff',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      ) : item.count !== undefined ? (
+                        <span className="admin-badge-count">{item.count}</span>
+                      ) : (
+                        <ChevronRight size={14} color={isActive ? '#dc2626' : '#cbd5e1'} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', background: '#fafbfc' }}>
-          <Link
-            href="/"
-            target="_blank"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '9px',
-              borderRadius: '8px',
-              background: '#ffffff',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
-              textDecoration: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              marginBottom: '10px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Globe size={15} />
-            <span>Open Live Website</span>
-          </Link>
+        {/* Sidebar Bottom Profile Section */}
+        <div style={{ padding: '16px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', padding: '0 4px' }}>
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                background: '#e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#475569',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+              }}
+            >
+              AD
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                Administrator
+              </div>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#166534',
+                  background: '#dcfce7',
+                  padding: '1px 6px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                }}
+              >
+                Super Admin
+              </span>
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              width: '100%',
-              padding: '9px',
-              borderRadius: '8px',
-              background: '#fee2e2',
-              color: '#991b1b',
-              border: '1px solid #fecaca',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            <LogOut size={15} />
-            <span>Sign Out</span>
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <Link
+              href="/"
+              target="_blank"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px',
+                borderRadius: '8px',
+                background: '#ffffff',
+                color: '#475569',
+                border: '1px solid #e2e8f0',
+                textDecoration: 'none',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+            >
+              <Globe size={14} />
+              <span>Visit Site</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px',
+                borderRadius: '8px',
+                background: '#fee2e2',
+                color: '#991b1b',
+                border: '1px solid #fecaca',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -1052,119 +1227,174 @@ export default function AdminPage() {
       <main className="admin-main">
         {/* Top Header Card */}
         <div
+          className="admin-card"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '16px',
-            background: '#ffffff',
             padding: '20px 24px',
-            borderRadius: '16px',
-            boxShadow: 'var(--shadow)',
             marginBottom: '24px',
           }}
         >
           <div>
-            <span
-              style={{
-                fontSize: '0.8rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                fontWeight: 700,
-                color: '#DC2626',
-              }}
-            >
-              Management Console
-            </span>
-            <h2 style={{ color: '#0f172a', margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: 800 }}>
-              {navMenuItems.find((m) => m.id === activeTab)?.label || 'Dashboard'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+              <span>Dashboard</span>
+              <ChevronRight size={12} />
+              <span style={{ color: '#dc2626' }}>{activeNavLabel}</span>
+            </div>
+            <h2 style={{ color: '#0f172a', margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: 800 }}>
+              {activeNavLabel}
             </h2>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <span
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={fetchAllData}
+              disabled={refreshing}
               style={{
-                padding: '6px 14px',
-                background: '#f1f5f9',
-                borderRadius: '20px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                color: '#475569',
                 fontSize: '0.85rem',
                 fontWeight: 600,
-                color: '#475569',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <RefreshCw size={14} className={refreshing ? 'spin-icon' : ''} />
+              <span>{refreshing ? 'Syncing...' : 'Refresh'}</span>
+            </button>
+
+            <span
+              style={{
+                padding: '6px 12px',
+                background: '#f0fdf4',
+                border: '1px solid #dcfce7',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: '#166534',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
               }}
             >
-              <ShieldCheck size={16} color="#166534" />
+              <ShieldCheck size={14} />
               <span>Admin Verified</span>
             </span>
           </div>
         </div>
 
-        {/* Stats summary cards */}
+        {/* Overview Stats Cards (4 Grid) */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px',
-            marginBottom: '24px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '18px',
+            marginBottom: '26px',
           }}
         >
-          <div
-            style={{
-              background: '#fff',
-              padding: '20px',
-              borderRadius: '14px',
-              boxShadow: 'var(--shadow)',
-              borderLeft: '4px solid #DC2626',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Total Donors</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#DC2626' }}>
-              {(stats.totalDonors || donors.length).toLocaleString()}
+          <div className="admin-stat-card">
+            <div>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Total Donors</span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                {(stats.totalDonors || donors.length).toLocaleString()}
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Active in database</span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#dc2626',
+              }}
+            >
+              <Users size={22} />
             </div>
           </div>
-          <div
-            style={{
-              background: '#fff',
-              padding: '20px',
-              borderRadius: '14px',
-              boxShadow: 'var(--shadow)',
-              borderLeft: '4px solid #2563eb',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Donation Records</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2563eb' }}>
-              {(stats.totalDonations || donations.length).toLocaleString()}
+
+          <div className="admin-stat-card">
+            <div>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Donation Records</span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                {(stats.totalDonations || donations.length).toLocaleString()}
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>Documented activities</span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#eff6ff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#2563eb',
+              }}
+            >
+              <FileText size={22} />
             </div>
           </div>
-          <div
-            style={{
-              background: '#fff',
-              padding: '20px',
-              borderRadius: '14px',
-              boxShadow: 'var(--shadow)',
-              borderLeft: '4px solid #10b981',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Certificates Issued</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10b981' }}>
-              {(stats.totalCertificates || certificates.length).toLocaleString()}
+
+          <div className="admin-stat-card">
+            <div>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Certificates Issued</span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                {(stats.totalCertificates || certificates.length).toLocaleString()}
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Generated & saved</span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#ecfdf5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#10b981',
+              }}
+            >
+              <Award size={22} />
             </div>
           </div>
-          <div
-            style={{
-              background: '#fff',
-              padding: '20px',
-              borderRadius: '14px',
-              boxShadow: 'var(--shadow)',
-              borderLeft: '4px solid #8b5cf6',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Unread Messages</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6' }}>
-              {messages.filter((m) => !m.isRead).length}
+
+          <div className="admin-stat-card">
+            <div>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Unread Messages</span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                {messages.filter((m) => !m.isRead).length}
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 600 }}>{messages.length} total received</span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#f5f3ff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#8b5cf6',
+              }}
+            >
+              <Mail size={22} />
             </div>
           </div>
         </div>
@@ -1173,7 +1403,7 @@ export default function AdminPage() {
         {/* TAB 1: DONORS MANAGEMENT */}
         {/* ========================================================================= */}
         {activeTab === 'adminDonors' && (
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
+          <div className="admin-card" style={{ padding: '24px' }}>
             <div
               style={{
                 display: 'flex',
@@ -1184,19 +1414,31 @@ export default function AdminPage() {
                 marginBottom: '20px',
               }}
             >
-              <h3 style={{ margin: 0, color: '#1f2937' }}>
-                Donors Directory ({filteredDonors.length} Total)
-              </h3>
+              <div>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: 800 }}>
+                  Donors Directory
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  Total {filteredDonors.length} registered donors
+                </p>
+              </div>
+
               <button
                 onClick={handleOpenAddDonor}
                 type="button"
-                className="submit-btn"
                 style={{
                   padding: '10px 18px',
-                  fontSize: '0.9rem',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
                 }}
               >
                 <Plus size={16} />
@@ -1206,140 +1448,131 @@ export default function AdminPage() {
 
             {/* Filter and search bar */}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-              <input
-                type="text"
-                placeholder="Search by donor name, phone number, or area..."
-                value={donorSearch}
-                onChange={(e) => setDonorSearch(e.target.value)}
-                style={{
-                  flex: 1,
-                  minWidth: '240px',
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid #d1d5db',
-                }}
-              />
-              <select
-                value={donorGroupFilter}
-                onChange={(e) => setDonorGroupFilter(e.target.value)}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  fontWeight: 600,
-                }}
-              >
-                <option value="all">All Blood Groups</option>
+              <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="Search by name, phone number, or area..."
+                  value={donorSearch}
+                  onChange={(e) => setDonorSearch(e.target.value)}
+                  className="admin-search-input"
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setDonorGroupFilter('all')}
+                  className={`admin-filter-chip ${donorGroupFilter === 'all' ? 'active' : ''}`}
+                >
+                  All
+                </button>
                 {VALID_BLOOD_GROUPS.map((bg) => (
-                  <option key={bg} value={bg}>
+                  <button
+                    key={bg}
+                    type="button"
+                    onClick={() => setDonorGroupFilter(bg)}
+                    className={`admin-filter-chip ${donorGroupFilter === bg ? 'active' : ''}`}
+                  >
                     {bg}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
-            {/* Table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '12px 14px' }}>Name</th>
-                    <th style={{ padding: '12px 14px' }}>Mobile Number</th>
-                    <th style={{ padding: '12px 14px' }}>Group</th>
-                    <th style={{ padding: '12px 14px' }}>Address</th>
-                    <th style={{ padding: '12px 14px' }}>Last Donation</th>
-                    <th style={{ padding: '12px 14px' }}>Eligibility</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDonors.map((donor) => {
-                    const eligibility = calculateEligibility(donor.lastDonation);
-                    return (
-                      <tr key={donor.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '12px 14px', fontWeight: 600 }}>{donor.name}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <a href={`tel:${donor.mobile}`} style={{ color: '#2563eb', fontWeight: 600 }}>
-                            {donor.mobile}
-                          </a>
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              background: '#fee2e2',
-                              color: '#991b1b',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {donor.bloodGroup}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px', color: '#4b5563' }}>{donor.address}</td>
-                        <td style={{ padding: '12px 14px', color: '#6b7280' }}>
-                          {donor.lastDonation || 'None recorded'}
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span
-                            style={{
-                              padding: '3px 8px',
-                              borderRadius: '10px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              background: eligibility.isEligible ? '#dcfce7' : '#fef3c7',
-                              color: eligibility.isEligible ? '#166534' : '#92400e',
-                            }}
-                          >
-                            {eligibility.isEligible ? 'Eligible' : `Wait (${eligibility.daysUntilEligible}d)`}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                          <button
-                            onClick={() => handleEditDonor(donor)}
-                            type="button"
-                            style={{
-                              marginRight: '6px',
-                              padding: '4px 10px',
-                              background: '#e0f2fe',
-                              color: '#0369a1',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDonor(donor.id, donor.name)}
-                            type="button"
-                            style={{
-                              padding: '4px 10px',
-                              background: '#fee2e2',
-                              color: '#991b1b',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Delete
-                          </button>
+            {/* Clean Donors Table */}
+            <div className="admin-table-container">
+              <div style={{ overflowX: 'auto' }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Donor Name</th>
+                      <th>Mobile Number</th>
+                      <th>Group</th>
+                      <th>Address</th>
+                      <th>Last Donation</th>
+                      <th>Eligibility</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDonors.map((donor) => {
+                      const eligibility = calculateEligibility(donor.lastDonation);
+                      return (
+                        <tr key={donor.id}>
+                          <td style={{ fontWeight: 700, color: '#0f172a' }}>{donor.name}</td>
+                          <td>
+                            <a href={`tel:${donor.mobile}`} style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
+                              {donor.mobile}
+                            </a>
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                background: '#fee2e2',
+                                color: '#991b1b',
+                                fontWeight: 800,
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              {donor.bloodGroup}
+                            </span>
+                          </td>
+                          <td style={{ color: '#475569' }}>{donor.address}</td>
+                          <td style={{ color: '#64748b' }}>
+                            {donor.lastDonation || 'None recorded'}
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                padding: '3px 10px',
+                                borderRadius: '12px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: eligibility.isEligible ? '#dcfce7' : '#fef3c7',
+                                color: eligibility.isEligible ? '#166534' : '#92400e',
+                                border: `1px solid ${eligibility.isEligible ? '#bbf7d0' : '#fde68a'}`,
+                              }}
+                            >
+                              {eligibility.isEligible ? 'Eligible' : `Wait (${eligibility.daysUntilEligible}d)`}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <button
+                              onClick={() => handleEditDonor(donor)}
+                              type="button"
+                              className="admin-btn-action admin-btn-edit"
+                              style={{ marginRight: '6px' }}
+                              title="Edit donor details"
+                            >
+                              <Edit2 size={13} />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDonor(donor.id, donor.name)}
+                              type="button"
+                              className="admin-btn-action admin-btn-delete"
+                              title="Delete donor"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredDonors.length === 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                          No donors found matching your search.
                         </td>
                       </tr>
-                    );
-                  })}
-                  {filteredDonors.length === 0 && (
-                    <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#9ca3af' }}>
-                        No donors found matching your criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Donor Add/Edit Modal */}
@@ -1348,7 +1581,8 @@ export default function AdminPage() {
                 style={{
                   position: 'fixed',
                   inset: 0,
-                  background: 'rgba(0,0,0,0.5)',
+                  background: 'rgba(15, 23, 42, 0.5)',
+                  backdropFilter: 'blur(4px)',
                   zIndex: 2000,
                   display: 'flex',
                   alignItems: 'center',
@@ -1357,25 +1591,24 @@ export default function AdminPage() {
                 }}
               >
                 <div
+                  className="admin-card"
                   style={{
-                    background: '#fff',
-                    borderRadius: '20px',
                     maxWidth: '560px',
                     width: '100%',
                     padding: '30px',
-                    boxShadow: 'var(--shadow-xl)',
                     maxHeight: '90vh',
                     overflowY: 'auto',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <h3 style={{ margin: 0, color: '#DC2626' }}>
-                      {editingDonorId ? 'Edit Donor Information' : 'Add New Donor'}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
+                      {editingDonorId ? 'Edit Donor Profile' : 'Add New Volunteer Donor'}
                     </h3>
                     <button
                       onClick={() => setShowDonorModal(false)}
                       type="button"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
                     >
                       <X size={20} />
                     </button>
@@ -1384,12 +1617,14 @@ export default function AdminPage() {
                   {donorFormMsg && (
                     <div
                       style={{
-                        padding: '10px 14px',
-                        background: '#f3f4f6',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
+                        padding: '12px 14px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        marginBottom: '18px',
                         fontSize: '0.9rem',
                         fontWeight: 600,
+                        color: '#0f172a',
                       }}
                     >
                       {donorFormMsg}
@@ -1403,7 +1638,7 @@ export default function AdminPage() {
                         <input
                           type="text"
                           required
-                          placeholder="e.g. John Doe"
+                          placeholder="e.g. Hisam Uddin"
                           value={donorFormData.name}
                           onChange={(e) => setDonorFormData({ ...donorFormData, name: e.target.value })}
                         />
@@ -1432,18 +1667,6 @@ export default function AdminPage() {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label>Gender (Optional)</label>
-                        <select
-                          value={donorFormData.gender || ''}
-                          onChange={(e) => setDonorFormData({ ...donorFormData, gender: e.target.value })}
-                        >
-                          <option value="">Select Gender</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
                         <label>Last Donation Date</label>
                         <input
                           type="date"
@@ -1451,40 +1674,47 @@ export default function AdminPage() {
                           onChange={(e) => setDonorFormData({ ...donorFormData, lastDonation: e.target.value })}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Date of Birth (Optional)</label>
-                        <input
-                          type="date"
-                          value={donorFormData.dob || ''}
-                          onChange={(e) => setDonorFormData({ ...donorFormData, dob: e.target.value })}
-                        />
-                      </div>
                       <div className="form-group full">
-                        <label>Address *</label>
+                        <label>Address / Area *</label>
                         <input
                           type="text"
                           required
-                          placeholder="e.g. Chavali, Chapainawabganj"
+                          placeholder="Village/Thana, Chapainawabganj"
                           value={donorFormData.address}
                           onChange={(e) => setDonorFormData({ ...donorFormData, address: e.target.value })}
                         />
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                      <button type="submit" className="submit-btn" disabled={savingDonor} style={{ flex: 1 }}>
-                        {savingDonor ? 'Saving Details...' : 'Save Details'}
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                      <button
+                        type="submit"
+                        disabled={savingDonor}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {savingDonor ? 'Saving...' : editingDonorId ? 'Update Donor' : 'Save Donor'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowDonorModal(false)}
                         style={{
-                          padding: '10px 20px',
-                          background: '#f3f4f6',
+                          padding: '12px 18px',
+                          background: '#f1f5f9',
+                          color: '#475569',
                           border: 'none',
                           borderRadius: '10px',
-                          cursor: 'pointer',
                           fontWeight: 600,
+                          cursor: 'pointer',
                         }}
                       >
                         Cancel
@@ -1503,20 +1733,22 @@ export default function AdminPage() {
         {activeTab === 'adminDonations' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
             {/* Add Donation Form */}
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>
-                {editingDonationId ? 'Edit Donation Record' : 'Record New Donation'}
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
+                {editingDonationId ? 'Edit Donation Record' : 'Record New Blood Donation'}
               </h3>
 
               {donationFormMsg && (
                 <div
                   style={{
                     padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    background: '#f3f4f6',
+                    borderRadius: '10px',
+                    marginBottom: '18px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
                     fontWeight: 600,
-                    fontSize: '0.9rem',
+                    fontSize: '0.88rem',
+                    color: '#0f172a',
                   }}
                 >
                   {donationFormMsg}
@@ -1530,7 +1762,7 @@ export default function AdminPage() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. Hisam Uddin"
                       value={donationForm.donorName}
                       onChange={(e) => setDonationForm({ ...donationForm, donorName: e.target.value })}
                     />
@@ -1580,7 +1812,7 @@ export default function AdminPage() {
                   <div className="form-group">
                     <label>Activity Photo (Optional)</label>
                     <input type="file" accept="image/*" onChange={handleDonationImageUpload} />
-                    {compressingImg && <span style={{ fontSize: '0.8rem', color: '#DC2626' }}>Compressing image...</span>}
+                    {compressingImg && <span style={{ fontSize: '0.8rem', color: '#dc2626' }}>Compressing image...</span>}
                   </div>
                   <div className="form-group full">
                     <label>Donor Address *</label>
@@ -1596,21 +1828,35 @@ export default function AdminPage() {
                     <label>Notes / Medical Remarks</label>
                     <textarea
                       rows={2}
-                      placeholder="e.g. Emergency donation at Sadar Hospital..."
+                      placeholder="e.g. Emergency voluntary donation at Sadar Hospital..."
                       value={donationForm.notes || ''}
                       onChange={(e) => setDonationForm({ ...donationForm, notes: e.target.value })}
                       style={{
                         width: '100%',
                         padding: '10px 14px',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         border: '1px solid #d1d5db',
                       }}
                     ></textarea>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                  <button type="submit" className="submit-btn" disabled={savingDonation || compressingImg} style={{ flex: 1 }}>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+                  <button
+                    type="submit"
+                    disabled={savingDonation || compressingImg}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: '#dc2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                    }}
+                  >
                     {savingDonation ? 'Saving Record...' : editingDonationId ? 'Update Record' : 'Save Record'}
                   </button>
                   {editingDonationId && (
@@ -1630,11 +1876,13 @@ export default function AdminPage() {
                         });
                       }}
                       style={{
-                        padding: '10px 16px',
-                        background: '#f3f4f6',
+                        padding: '12px 18px',
+                        background: '#f1f5f9',
+                        color: '#475569',
                         border: 'none',
                         borderRadius: '10px',
                         cursor: 'pointer',
+                        fontWeight: 600,
                       }}
                     >
                       Cancel
@@ -1645,12 +1893,12 @@ export default function AdminPage() {
             </div>
 
             {/* Donation Records List */}
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ color: '#1f2937', marginBottom: '16px' }}>
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
                 Donation History ({donations.length} Records)
               </h3>
 
-              <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+              <div style={{ maxHeight: '640px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {donations.map((d) => (
                   <div
                     key={d.id}
@@ -1660,36 +1908,37 @@ export default function AdminPage() {
                       gap: '14px',
                       padding: '14px',
                       borderRadius: '12px',
-                      background: '#f9fafb',
-                      marginBottom: '12px',
-                      border: '1px solid #e5e7eb',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     {d.image ? (
                       <img
                         src={d.image}
                         alt={d.donorName}
-                        style={{ width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover' }}
+                        style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'cover' }}
                       />
                     ) : (
                       <div
                         style={{
-                          width: '60px',
-                          height: '60px',
+                          width: '56px',
+                          height: '56px',
                           borderRadius: '10px',
                           background: '#fee2e2',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: '#DC2626',
+                          color: '#dc2626',
+                          flexShrink: 0,
                         }}
                       >
-                        <FileText size={24} />
+                        <FileText size={22} />
                       </div>
                     )}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1f2937' }}>
-                        {d.donorName}{' '}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{d.donorName}</span>
                         <span
                           style={{
                             fontSize: '0.75rem',
@@ -1697,54 +1946,41 @@ export default function AdminPage() {
                             background: '#fee2e2',
                             color: '#991b1b',
                             borderRadius: '6px',
+                            fontWeight: 800,
                           }}
                         >
                           {d.bloodGroup}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
                         Date: {d.date} | ID: {d.number}
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{d.donorAddress}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {d.donorAddress}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         onClick={() => handleEditDonation(d)}
                         type="button"
-                        style={{
-                          padding: '4px 10px',
-                          background: '#e0f2fe',
-                          color: '#0369a1',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
+                        className="admin-btn-action admin-btn-edit"
+                        title="Edit donation record"
                       >
-                        Edit
+                        <Edit2 size={13} />
                       </button>
                       <button
                         onClick={() => handleDeleteDonation(d.id)}
                         type="button"
-                        style={{
-                          padding: '4px 10px',
-                          background: '#fee2e2',
-                          color: '#991b1b',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
+                        className="admin-btn-action admin-btn-delete"
+                        title="Delete donation record"
                       >
-                        Delete
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
                 ))}
                 {donations.length === 0 && (
-                  <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  <p style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                     No donation records found.
                   </p>
                 )}
@@ -1759,11 +1995,13 @@ export default function AdminPage() {
         {activeTab === 'adminCertificates' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
             {/* Left form controls */}
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>Certificate Generator</h3>
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
+                Certificate Generator
+              </h3>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Auto-fill from Donation Record
                 </label>
                 <select
@@ -1771,8 +2009,10 @@ export default function AdminPage() {
                   style={{
                     width: '100%',
                     padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontWeight: 600,
                   }}
                 >
                   <option value="">-- Choose a donation record --</option>
@@ -1824,7 +2064,7 @@ export default function AdminPage() {
                     rows={3}
                     value={certMessageText}
                     onChange={(e) => setCertMessageText(e.target.value)}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1' }}
                   ></textarea>
                 </div>
               </div>
@@ -1832,27 +2072,36 @@ export default function AdminPage() {
               {certSaveMsg && (
                 <div
                   style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    margin: '14px 0',
-                    background: '#f3f4f6',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    margin: '16px 0',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
                     fontWeight: 600,
-                    fontSize: '0.9rem',
+                    fontSize: '0.88rem',
+                    color: '#0f172a',
                   }}
                 >
                   {certSaveMsg}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={handleSaveCertificate}
-                  className="submit-btn"
                   disabled={certLoading}
                   style={{
                     flex: 1,
-                    minWidth: '160px',
+                    minWidth: '150px',
+                    padding: '12px',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1865,11 +2114,17 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={handleDownloadCert}
-                  className="submit-btn"
                   style={{
-                    background: '#2563eb',
                     flex: 1,
-                    minWidth: '160px',
+                    minWidth: '150px',
+                    padding: '12px',
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1882,14 +2137,14 @@ export default function AdminPage() {
               </div>
 
               {savedCertId && (
-                <div style={{ marginTop: '14px', textAlign: 'center' }}>
+                <div style={{ marginTop: '16px', textAlign: 'center' }}>
                   <Link
                     href={`/certificates/${savedCertId}`}
                     target="_blank"
                     style={{
                       color: '#2563eb',
                       textDecoration: 'underline',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fontSize: '0.9rem',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1904,8 +2159,10 @@ export default function AdminPage() {
             </div>
 
             {/* Right preview canvas */}
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ color: '#1f2937', marginBottom: '14px' }}>Live Certificate Preview</h3>
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '14px' }}>
+                Live Certificate Preview
+              </h3>
 
               <div
                 ref={certRef}
@@ -1913,7 +2170,7 @@ export default function AdminPage() {
                   background: '#ffffff',
                   padding: '30px 24px',
                   borderRadius: '16px',
-                  border: '8px double #DC2626',
+                  border: '8px double #dc2626',
                   textAlign: 'center',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                 }}
@@ -1927,21 +2184,21 @@ export default function AdminPage() {
                       e.currentTarget.style.display = 'none';
                     }}
                   />
-                  <h4 style={{ color: '#DC2626', margin: 0, fontSize: '1.4rem' }}>Chavali Blood Foundation</h4>
+                  <h4 style={{ color: '#dc2626', margin: 0, fontSize: '1.4rem' }}>Chavali Blood Foundation</h4>
                 </div>
-                <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: '4px 0 14px 0' }}>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '4px 0 14px 0' }}>
                   Serving Humanity with Every Drop
                 </p>
 
-                <div style={{ margin: '10px auto', borderBottom: '2px solid #DC2626', width: '60px' }}></div>
+                <div style={{ margin: '10px auto', borderBottom: '2px solid #dc2626', width: '60px' }}></div>
 
-                <h5 style={{ fontSize: '1.2rem', color: '#1f2937', margin: '10px 0', fontWeight: 700 }}>
+                <h5 style={{ fontSize: '1.2rem', color: '#0f172a', margin: '10px 0', fontWeight: 700 }}>
                   Certificate of Appreciation
                 </h5>
 
-                <p style={{ fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.8', margin: '14px 0' }}>
+                <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: '1.8', margin: '14px 0' }}>
                   Presented with highest gratitude to{' '}
-                  <strong style={{ color: '#DC2626', fontSize: '1.15rem' }}>
+                  <strong style={{ color: '#dc2626', fontSize: '1.15rem' }}>
                     {certDonorName || '[Donor Name]'}
                   </strong>{' '}
                   for voluntarily donating blood through Chavali Blood Foundation to help save an invaluable human life.
@@ -1953,23 +2210,24 @@ export default function AdminPage() {
                     justifyContent: 'space-around',
                     background: '#fef2f2',
                     padding: '12px',
-                    borderRadius: '10px',
+                    borderRadius: '12px',
                     margin: '16px 0',
+                    border: '1px solid #fecaca',
                   }}
                 >
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Blood Group</span>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#DC2626' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Blood Group</span>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626' }}>
                       {certBloodGroup}
                     </div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Date</span>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1f2937' }}>{certDate}</div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Date</span>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{certDate}</div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Certificate ID</span>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1f2937' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Certificate ID</span>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
                       {certNumber || 'CBF-2026'}
                     </div>
                   </div>
@@ -1985,12 +2243,12 @@ export default function AdminPage() {
                   }}
                 >
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ borderBottom: '1px solid #9ca3af', width: '100px', marginBottom: '4px' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: '#4b5563' }}>General Secretary</span>
+                    <div style={{ borderBottom: '1px solid #94a3b8', width: '100px', marginBottom: '4px' }}></div>
+                    <span style={{ fontSize: '0.75rem', color: '#475569' }}>General Secretary</span>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ borderBottom: '1px solid #9ca3af', width: '100px', marginBottom: '4px' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: '#4b5563' }}>President</span>
+                    <div style={{ borderBottom: '1px solid #94a3b8', width: '100px', marginBottom: '4px' }}></div>
+                    <span style={{ fontSize: '0.75rem', color: '#475569' }}>President</span>
                   </div>
                 </div>
               </div>
@@ -2002,8 +2260,10 @@ export default function AdminPage() {
         {/* TAB 4: GALLERY MANAGEMENT */}
         {/* ========================================================================= */}
         {activeTab === 'adminGallery' && (
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>Gallery Photos & Uploads</h3>
+          <div className="admin-card" style={{ padding: '24px' }}>
+            <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
+              Gallery Photos & Uploads
+            </h3>
 
             <form onSubmit={handleSaveGallery} style={{ maxWidth: '600px', marginBottom: '30px' }}>
               <div className="form-grid">
@@ -2034,29 +2294,41 @@ export default function AdminPage() {
                   <img
                     src={galleryImgData}
                     alt="Preview"
-                    style={{ maxWidth: '200px', borderRadius: '10px', border: '2px solid #DC2626' }}
+                    style={{ maxWidth: '200px', borderRadius: '10px', border: '2px solid #dc2626' }}
                   />
                 </div>
               )}
 
               {galleryMsg && (
-                <div style={{ padding: '10px 14px', background: '#f3f4f6', borderRadius: '8px', margin: '14px 0' }}>
+                <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', margin: '14px 0', fontSize: '0.88rem', fontWeight: 600 }}>
                   {galleryMsg}
                 </div>
               )}
 
               <button
                 type="submit"
-                className="submit-btn"
                 disabled={uploadingGallery}
-                style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                style={{
+                  marginTop: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 18px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                }}
               >
                 <Upload size={16} />
                 <span>{uploadingGallery ? 'Uploading Photo...' : 'Upload Photo'}</span>
               </button>
             </form>
 
-            <h4 style={{ color: '#1f2937', marginBottom: '14px' }}>
+            <h4 style={{ color: '#0f172a', fontSize: '1rem', fontWeight: 800, marginBottom: '14px' }}>
               Current Gallery Photos ({gallery.length} Total)
             </h4>
 
@@ -2073,8 +2345,8 @@ export default function AdminPage() {
                   style={{
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    background: '#f9fafb',
-                    border: '1px solid #e5e7eb',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
                     position: 'relative',
                   }}
                 >
@@ -2083,12 +2355,13 @@ export default function AdminPage() {
                     alt={img.caption || 'Gallery Photo'}
                     style={{ width: '100%', height: '140px', objectFit: 'cover' }}
                   />
-                  <div style={{ padding: '10px' }}>
+                  <div style={{ padding: '12px' }}>
                     <p
                       style={{
                         fontSize: '0.85rem',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         margin: 0,
+                        color: '#0f172a',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -2096,7 +2369,7 @@ export default function AdminPage() {
                     >
                       {img.caption || 'Untitled Photo'}
                     </p>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'capitalize' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'capitalize' }}>
                       {img.category}
                     </span>
                     <button
@@ -2105,14 +2378,14 @@ export default function AdminPage() {
                       style={{
                         marginTop: '8px',
                         width: '100%',
-                        padding: '4px',
+                        padding: '6px',
                         background: '#fee2e2',
                         color: '#991b1b',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         cursor: 'pointer',
                         fontSize: '0.8rem',
-                        fontWeight: 600,
+                        fontWeight: 700,
                       }}
                     >
                       Delete
@@ -2121,7 +2394,7 @@ export default function AdminPage() {
                 </div>
               ))}
               {gallery.length === 0 && (
-                <p style={{ color: '#9ca3af', gridColumn: '1 / -1', padding: '20px 0' }}>
+                <p style={{ color: '#94a3b8', gridColumn: '1 / -1', padding: '20px 0' }}>
                   No photos uploaded to gallery yet.
                 </p>
               )}
@@ -2133,8 +2406,8 @@ export default function AdminPage() {
         {/* TAB 5: CONTACT MESSAGES INBOX */}
         {/* ========================================================================= */}
         {activeTab === 'adminMessages' && (
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#1f2937', marginBottom: '16px' }}>
+          <div className="admin-card" style={{ padding: '24px' }}>
+            <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
               Contact Messages Inbox ({messages.length} Messages)
             </h3>
 
@@ -2145,8 +2418,8 @@ export default function AdminPage() {
                   style={{
                     padding: '18px',
                     borderRadius: '12px',
-                    background: msg.isRead ? '#f9fafb' : '#fef2f2',
-                    border: msg.isRead ? '1px solid #e5e7eb' : '1px solid #fecaca',
+                    background: msg.isRead ? '#ffffff' : '#fef2f2',
+                    border: msg.isRead ? '1px solid #e2e8f0' : '1px solid #fecaca',
                   }}
                 >
                   <div
@@ -2159,30 +2432,31 @@ export default function AdminPage() {
                     }}
                   >
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#1f2937' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
                         {msg.name}{' '}
                         {!msg.isRead && (
                           <span
                             style={{
-                              fontSize: '0.75rem',
+                              fontSize: '0.72rem',
                               padding: '2px 8px',
-                              background: '#DC2626',
+                              background: '#dc2626',
                               color: '#fff',
                               borderRadius: '10px',
+                              fontWeight: 800,
                             }}
                           >
-                            New
+                            NEW
                           </span>
                         )}
                       </h4>
-                      <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
                         {msg.phone && (
-                          <a href={`tel:${msg.phone}`} style={{ marginRight: '12px', color: '#2563eb' }}>
+                          <a href={`tel:${msg.phone}`} style={{ marginRight: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
                             {msg.phone}
                           </a>
                         )}
                         {msg.email && (
-                          <a href={`mailto:${msg.email}`} style={{ color: '#2563eb' }}>
+                          <a href={`mailto:${msg.email}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
                             {msg.email}
                           </a>
                         )}
@@ -2194,13 +2468,14 @@ export default function AdminPage() {
                         onClick={() => handleToggleMessageRead(msg)}
                         type="button"
                         style={{
-                          padding: '4px 10px',
-                          background: '#f3f4f6',
+                          padding: '6px 12px',
+                          background: '#f1f5f9',
                           border: 'none',
-                          borderRadius: '6px',
+                          borderRadius: '8px',
                           cursor: 'pointer',
                           fontSize: '0.8rem',
                           fontWeight: 600,
+                          color: '#475569',
                         }}
                       >
                         {msg.isRead ? 'Mark as Unread' : 'Mark as Read'}
@@ -2209,14 +2484,14 @@ export default function AdminPage() {
                         onClick={() => handleDeleteMessage(msg.id)}
                         type="button"
                         style={{
-                          padding: '4px 10px',
+                          padding: '6px 12px',
                           background: '#fee2e2',
                           color: '#991b1b',
                           border: 'none',
-                          borderRadius: '6px',
+                          borderRadius: '8px',
                           cursor: 'pointer',
                           fontSize: '0.8rem',
-                          fontWeight: 600,
+                          fontWeight: 700,
                         }}
                       >
                         Delete
@@ -2225,18 +2500,18 @@ export default function AdminPage() {
                   </div>
 
                   {msg.subject && (
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginTop: '10px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e293b', marginTop: '10px' }}>
                       Subject: {msg.subject}
                     </div>
                   )}
 
-                  <p style={{ marginTop: '8px', color: '#4b5563', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                  <p style={{ marginTop: '8px', color: '#475569', fontSize: '0.92rem', lineHeight: '1.6' }}>
                     {msg.message}
                   </p>
                 </div>
               ))}
               {messages.length === 0 && (
-                <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No messages in inbox.</p>
+                <p style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No messages in inbox.</p>
               )}
             </div>
           </div>
@@ -2246,8 +2521,10 @@ export default function AdminPage() {
         {/* TAB 6: ANALYTICS */}
         {/* ========================================================================= */}
         {activeTab === 'adminAnalytics' && (
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#1f2937', marginBottom: '20px' }}>Blood Group Distribution & Analytics</h3>
+          <div className="admin-card" style={{ padding: '24px' }}>
+            <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '20px' }}>
+              Blood Group Distribution & Analytics
+            </h3>
 
             <div
               style={{
@@ -2268,28 +2545,28 @@ export default function AdminPage() {
                     style={{
                       padding: '18px',
                       borderRadius: '12px',
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#DC2626' }}>{bg}</span>
-                      <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{percent}%</span>
+                      <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#dc2626' }}>{bg}</span>
+                      <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>{percent}%</span>
                     </div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '8px', color: '#1f2937' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px', color: '#0f172a' }}>
                       {count} Donors
                     </div>
                     <div
                       style={{
                         marginTop: '8px',
                         height: '6px',
-                        background: '#fee2e2',
+                        background: '#f1f5f9',
                         borderRadius: '3px',
                         overflow: 'hidden',
                       }}
                     >
                       <div
-                        style={{ width: `${percent}%`, height: '100%', background: '#DC2626', borderRadius: '3px' }}
+                        style={{ width: `${percent}%`, height: '100%', background: '#dc2626', borderRadius: '3px' }}
                       ></div>
                     </div>
                   </div>
@@ -2303,18 +2580,22 @@ export default function AdminPage() {
         {/* TAB 7: SETTINGS & PASSWORD */}
         {/* ========================================================================= */}
         {activeTab === 'adminSettings' && (
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-            <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>Change Admin Password</h3>
+          <div className="admin-card" style={{ padding: '24px' }}>
+            <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
+              Change Admin Password
+            </h3>
 
             {pwdMsg && (
               <div
                 style={{
-                  padding: '12px',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
-                  background: '#f3f4f6',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  marginBottom: '18px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
                   fontWeight: 600,
-                  fontSize: '0.9rem',
+                  fontSize: '0.88rem',
+                  color: '#0f172a',
                 }}
               >
                 {pwdMsg}
@@ -2322,8 +2603,8 @@ export default function AdminPage() {
             )}
 
             <form onSubmit={handleChangePassword} style={{ maxWidth: '440px' }}>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Current Password *
                 </label>
                 <input
@@ -2334,15 +2615,16 @@ export default function AdminPage() {
                   onChange={(e) => setPwdForm({ ...pwdForm, currentPassword: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
                   }}
                 />
               </div>
 
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   New Password *
                 </label>
                 <input
@@ -2353,15 +2635,16 @@ export default function AdminPage() {
                   onChange={(e) => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
                   }}
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '6px' }}>
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Confirm New Password *
                 </label>
                 <input
@@ -2372,14 +2655,28 @@ export default function AdminPage() {
                   onChange={(e) => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
                   }}
                 />
               </div>
 
-              <button type="submit" className="submit-btn" disabled={savingPwd}>
+              <button
+                type="submit"
+                disabled={savingPwd}
+                style={{
+                  padding: '12px 24px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                }}
+              >
                 {savingPwd ? 'Updating Password...' : 'Update Password'}
               </button>
             </form>
