@@ -20,6 +20,9 @@ Thumbs.db
 # Vercel & Deployment
 .vercel
 .output
+.next/
+out/
+
 
 # Node & Package Managers (if used locally)
 node_modules/
