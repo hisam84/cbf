@@ -40,6 +40,10 @@ import {
   X,
   ExternalLink,
   Phone,
+  Menu,
+  Droplet,
+  ChevronRight,
+  ShieldCheck,
 } from 'lucide-react';
 
 type AdminTab =
@@ -60,8 +64,9 @@ export default function AdminPage() {
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
   const [loadingLogin, setLoadingLogin] = useState<boolean>(false);
 
-  // Active tab
+  // Sidebar & Active tab
   const [activeTab, setActiveTab] = useState<AdminTab>('adminDonors');
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   // Data states
   const [stats, setStats] = useState<StatsData>({
@@ -253,6 +258,11 @@ export default function AdminPage() {
     setIsLoggedIn(false);
     localStorage.removeItem('chavali_admin_token');
     sessionStorage.removeItem('chavali_admin_token');
+  };
+
+  const handleNavClick = (tabId: AdminTab) => {
+    setActiveTab(tabId);
+    setSidebarOpen(false);
   };
 
   const handleOpenAddDonor = () => {
@@ -628,6 +638,21 @@ export default function AdminPage() {
     return matchGroup && matchQuery;
   });
 
+  const navMenuItems = [
+    { id: 'adminDonors' as AdminTab, label: 'Donors Directory', icon: Users, count: donors.length },
+    { id: 'adminDonations' as AdminTab, label: 'Donation Records', icon: FileText, count: donations.length },
+    { id: 'adminCertificates' as AdminTab, label: 'Certificate Generator', icon: Award, count: certificates.length },
+    { id: 'adminGallery' as AdminTab, label: 'Gallery Management', icon: ImageIcon, count: gallery.length },
+    {
+      id: 'adminMessages' as AdminTab,
+      label: 'Messages Inbox',
+      icon: Mail,
+      badge: messages.filter((m) => !m.isRead).length,
+    },
+    { id: 'adminAnalytics' as AdminTab, label: 'Analytics', icon: BarChart3 },
+    { id: 'adminSettings' as AdminTab, label: 'Settings & Security', icon: Key },
+  ];
+
   // ----------------------------------------------------------------------------
   // LOGIN SCREEN (ENGLISH)
   // ----------------------------------------------------------------------------
@@ -769,12 +794,263 @@ export default function AdminPage() {
   }
 
   // ----------------------------------------------------------------------------
-  // LOGGED-IN ADMIN DASHBOARD (ENGLISH)
+  // LOGGED-IN ADMIN DASHBOARD (RESPONSIVE SIDEBAR LAYOUT)
   // ----------------------------------------------------------------------------
   return (
-    <section className="section section-alt" style={{ paddingTop: '30px', minHeight: '90vh' }}>
-      <div className="container">
-        {/* Top Header & DB Status */}
+    <div className="admin-shell">
+      {/* Mobile Top Header */}
+      <div className="admin-mobile-header">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#1f2937',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '6px',
+          }}
+          aria-label="Open sidebar navigation"
+        >
+          <Menu size={24} />
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#DC2626', display: 'flex' }}>
+            <Droplet size={20} fill="#DC2626" />
+          </span>
+          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1f2937' }}>Chavali Admin</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            background: '#fee2e2',
+            border: '1px solid #fecaca',
+            color: '#991b1b',
+            borderRadius: '8px',
+            padding: '6px 10px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+          }}
+          title="Sign Out"
+        >
+          <LogOut size={14} />
+          <span>Exit</span>
+        </button>
+      </div>
+
+      {/* Backdrop overlay for mobile drawer */}
+      <div
+        className={`admin-sidebar-backdrop ${sidebarOpen ? 'active' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        role="presentation"
+      ></div>
+
+      {/* Sidebar Navigation */}
+      <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        {/* Sidebar Brand / Header */}
+        <div
+          style={{
+            padding: '20px',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#DC2626',
+              }}
+            >
+              <Droplet size={22} fill="#DC2626" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>
+                Chavali Admin
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Blood Foundation Panel</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              display: 'none',
+              background: 'none',
+              border: 'none',
+              color: '#64748b',
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+            className="mobile-close-btn"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Database Status Indicator */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: dbStatus.connected ? '#10b981' : '#f59e0b',
+                boxShadow: dbStatus.connected ? '0 0 0 3px rgba(16, 185, 129, 0.2)' : 'none',
+              }}
+            ></span>
+            <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+              {dbStatus.connected ? `Neon PostgreSQL (${dbStatus.latencyMs}ms)` : 'Database Offline'}
+            </span>
+          </div>
+        </div>
+
+        {/* Sidebar Nav Items List */}
+        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {navMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleNavClick(item.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: isActive ? '#fee2e2' : 'transparent',
+                  color: isActive ? '#991b1b' : '#475569',
+                  fontWeight: isActive ? 700 : 600,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.background = '#f1f5f9';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Icon size={18} color={isActive ? '#DC2626' : '#64748b'} />
+                  <span>{item.label}</span>
+                </div>
+
+                {/* Badge/Count */}
+                {item.badge !== undefined && item.badge > 0 ? (
+                  <span
+                    style={{
+                      background: '#DC2626',
+                      color: '#ffffff',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                    }}
+                  >
+                    {item.badge}
+                  </span>
+                ) : item.count !== undefined ? (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      color: isActive ? '#991b1b' : '#94a3b8',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {item.count}
+                  </span>
+                ) : (
+                  <ChevronRight size={14} color={isActive ? '#DC2626' : '#cbd5e1'} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', background: '#fafbfc' }}>
+          <Link
+            href="/"
+            target="_blank"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '9px',
+              borderRadius: '8px',
+              background: '#ffffff',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              textDecoration: 'none',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              marginBottom: '10px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Globe size={15} />
+            <span>Open Live Website</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              width: '100%',
+              padding: '9px',
+              borderRadius: '8px',
+              background: '#fee2e2',
+              color: '#991b1b',
+              border: '1px solid #fecaca',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <LogOut size={15} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="admin-main">
+        {/* Top Header Card */}
         <div
           style={{
             display: 'flex',
@@ -782,7 +1058,7 @@ export default function AdminPage() {
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '16px',
-            background: '#fff',
+            background: '#ffffff',
             padding: '20px 24px',
             borderRadius: '16px',
             boxShadow: 'var(--shadow)',
@@ -790,65 +1066,39 @@ export default function AdminPage() {
           }}
         >
           <div>
-            <h2 style={{ color: '#DC2626', margin: 0, fontSize: '1.6rem' }}>Chavali Admin Dashboard</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  background: dbStatus.connected ? '#10b981' : '#f59e0b',
-                }}
-              ></span>
-              <span style={{ fontSize: '0.85rem', color: '#4b5563' }}>
-                {dbStatus.connected
-                  ? `Neon PostgreSQL Connected (${dbStatus.latencyMs}ms latency)`
-                  : dbStatus.message}
-              </span>
-            </div>
+            <span
+              style={{
+                fontSize: '0.8rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 700,
+                color: '#DC2626',
+              }}
+            >
+              Management Console
+            </span>
+            <h2 style={{ color: '#0f172a', margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: 800 }}>
+              {navMenuItems.find((m) => m.id === activeTab)?.label || 'Dashboard'}
+            </h2>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <Link
-              href="/"
-              target="_blank"
+            <span
               style={{
-                padding: '8px 16px',
-                background: '#f3f4f6',
-                color: '#374151',
-                borderRadius: '8px',
-                textDecoration: 'none',
+                padding: '6px 14px',
+                background: '#f1f5f9',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
                 fontWeight: 600,
-                fontSize: '0.9rem',
+                color: '#475569',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
               }}
             >
-              <Globe size={16} />
-              <span>View Website</span>
-            </Link>
-            <button
-              onClick={handleLogout}
-              type="button"
-              style={{
-                padding: '8px 16px',
-                background: '#fee2e2',
-                color: '#991b1b',
-                border: '1px solid #fecaca',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <LogOut size={16} />
-              <span>Sign Out</span>
-            </button>
+              <ShieldCheck size={16} color="#166534" />
+              <span>Admin Verified</span>
+            </span>
           </div>
         </div>
 
@@ -917,59 +1167,6 @@ export default function AdminPage() {
               {messages.filter((m) => !m.isRead).length}
             </div>
           </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            overflowX: 'auto',
-            paddingBottom: '10px',
-            marginBottom: '20px',
-          }}
-        >
-          {[
-            { id: 'adminDonors', label: 'Donors Directory', icon: Users },
-            { id: 'adminDonations', label: 'Donation Records', icon: FileText },
-            { id: 'adminCertificates', label: 'Certificate Generator', icon: Award },
-            { id: 'adminGallery', label: 'Gallery Management', icon: ImageIcon },
-            {
-              id: 'adminMessages',
-              label: `Inbox (${messages.filter((m) => !m.isRead).length})`,
-              icon: Mail,
-            },
-            { id: 'adminAnalytics', label: 'Analytics', icon: BarChart3 },
-            { id: 'adminSettings', label: 'Settings & Security', icon: Key },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as AdminTab)}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: activeTab === tab.id ? '#DC2626' : '#fff',
-                  color: activeTab === tab.id ? '#fff' : '#374151',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--shadow)',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s ease',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Icon size={16} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
         </div>
 
         {/* ========================================================================= */}
@@ -2188,7 +2385,7 @@ export default function AdminPage() {
             </form>
           </div>
         )}
-      </div>
-    </section>
+      </main>
+    </div>
   );
 }
