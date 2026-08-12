@@ -10,6 +10,9 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const pathname = usePathname();
 
+  // Hide the public header bar completely when inside the Admin panel
+  const isAdmin = pathname?.startsWith('/admin');
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 30) {
@@ -27,6 +30,10 @@ export default function Header() {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  if (isAdmin) {
+    return null;
+  }
 
   return (
     <>

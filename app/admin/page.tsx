@@ -658,8 +658,8 @@ export default function AdminPage() {
   // ----------------------------------------------------------------------------
   if (!isLoggedIn) {
     return (
-      <section className="section" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center' }}>
-        <div className="container" style={{ maxWidth: '440px', margin: '0 auto' }}>
+      <section className="admin-login-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ maxWidth: '440px', width: '100%', margin: '0 auto' }}>
           <div
             style={{
               background: '#ffffff',

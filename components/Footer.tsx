@@ -1,10 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Phone, Mail, MapPin } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
   const currentYear = new Date().getFullYear();
+
+  // Hide the public footer completely on Admin panel
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="footer">
