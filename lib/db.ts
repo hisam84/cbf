@@ -145,6 +145,26 @@ export async function ensureTablesExist(): Promise<void> {
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_contact_created_at ON contact_messages(created_at DESC);`;
 
+    // 7. Organization Members Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS members (
+        id BIGSERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        designation VARCHAR(255) NOT NULL,
+        mobile VARCHAR(50),
+        blood_group VARCHAR(10),
+        image TEXT,
+        bio TEXT,
+        role_type VARCHAR(50) DEFAULT 'executive',
+        order_index INT DEFAULT 0,
+        joined_at VARCHAR(50),
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_members_order ON members(order_index ASC, created_at ASC);`;
+
+
     // Seed initial admin if empty
     const defaultUser = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
     const defaultPass = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';

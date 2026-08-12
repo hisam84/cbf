@@ -119,6 +119,33 @@ export interface GalleryItem {
   uploadedAt?: string | null;
 }
 
+export interface Member {
+  id: number | string;
+  name: string;
+  designation: string;
+  mobile?: string | null;
+  bloodGroup?: ValidBloodGroup | string | null;
+  image?: string | null;
+  bio?: string | null;
+  roleType?: 'adviser' | 'executive' | 'member' | string;
+  orderIndex?: number;
+  joinedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface MemberInput {
+  name: string;
+  designation: string;
+  mobile?: string | null;
+  bloodGroup?: string | null;
+  image?: string | null;
+  bio?: string | null;
+  roleType?: string;
+  orderIndex?: number;
+  joinedAt?: string | null;
+}
+
 export interface ContactMessage {
   id: number | string;
   name: string;

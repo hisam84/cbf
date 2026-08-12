@@ -64,6 +64,9 @@ export default function Header() {
             <Link href="/about" className={pathname === '/about' ? 'active' : ''}>
               আমাদের সম্পর্কে
             </Link>
+            <Link href="/members" className={pathname === '/members' ? 'active' : ''}>
+              সদস্যবৃন্দ
+            </Link>
             <Link href="/donors" className={pathname === '/donors' ? 'active' : ''}>
               রক্তদাতা তালিকা
             </Link>

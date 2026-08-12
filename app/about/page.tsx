@@ -1,9 +1,24 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Search, Users, Clock, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Search, Users, Clock, ArrowRight, Award, Droplet } from 'lucide-react';
+import { Member } from '@/lib/types';
 
 export default function AboutPage() {
+  const [members, setMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    fetch('/api/members')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setMembers(data.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <section className="section" id="about" style={{ paddingTop: '40px' }}>
       <div className="container">
@@ -148,6 +163,159 @@ export default function AboutPage() {
             </div>
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* EXECUTIVE COMMITTEE & MEMBERS SECTION */}
+        {/* ========================================================================= */}
+        {members.length > 0 && (
+          <div style={{ marginTop: '70px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '24px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.45rem', color: '#0f172a', fontWeight: 800, margin: 0 }}>
+                  আমাদের কার্যনির্বাহী পরিষদ ও সদস্যবৃন্দ
+                </h3>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+                  চাঁভালি রক্ত ফাউন্ডেশনের পরিচালন পরিষদ ও নিবেদিতপ্রাণ সদস্য
+                </p>
+              </div>
+
+              <Link
+                href="/members"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#dc2626',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  textDecoration: 'none',
+                }}
+              >
+                <span>সকল সদস্য দেখুন ({members.length})</span>
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gap: '20px',
+              }}
+            >
+              {members.slice(0, 8).map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '16px',
+                    padding: '24px 18px',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)',
+                    border: '1px solid #f1f5f9',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    transition: 'all 0.25s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(220, 38, 38, 0.08)';
+                    e.currentTarget.style.borderColor = '#fecaca';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.04)';
+                    e.currentTarget.style.borderColor = '#f1f5f9';
+                  }}
+                >
+                  <div style={{ position: 'relative', marginBottom: '14px' }}>
+                    {m.image ? (
+                      <img
+                        src={m.image}
+                        alt={m.name}
+                        style={{
+                          width: '84px',
+                          height: '84px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '3px solid #fee2e2',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '84px',
+                          height: '84px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#dc2626',
+                          fontSize: '1.5rem',
+                          fontWeight: 800,
+                        }}
+                      >
+                        {m.name.slice(0, 2)}
+                      </div>
+                    )}
+
+                    {m.bloodGroup && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          border: '2px solid #ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                        }}
+                      >
+                        <Droplet size={9} fill="#ffffff" />
+                        <span>{m.bloodGroup}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+                    {m.name}
+                  </h4>
+
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '3px 10px',
+                      borderRadius: '16px',
+                      background: '#fee2e2',
+                      color: '#991b1b',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Award size={12} />
+                    <span>{m.designation}</span>
+                  </span>
+
+                  {m.bio && (
+                    <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '8px 0 0 0', fontStyle: 'italic' }}>
+                      "{m.bio}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -38,6 +38,7 @@ export default function Footer() {
           <h4>দ্রুত লিংক</h4>
           <Link href="/">হোম</Link>
           <Link href="/about">আমাদের সম্পর্কে</Link>
+          <Link href="/members">সংগঠনের সদস্যবৃন্দ</Link>
           <Link href="/register">রক্তদান নিবন্ধন</Link>
           <Link href="/donors">রক্তদাতা তালিকা</Link>
           <Link href="/gallery">গ্যালারি</Link>

@@ -8,6 +8,8 @@ import {
   DonorInput,
   Donation,
   DonationInput,
+  Member,
+  MemberInput,
   Certificate,
   GalleryItem,
   ContactMessage,
@@ -56,6 +58,7 @@ import {
 type AdminTab =
   | 'adminDonors'
   | 'adminDonations'
+  | 'adminMembers'
   | 'adminCertificates'
   | 'adminGallery'
   | 'adminMessages'
@@ -74,7 +77,6 @@ interface NavGroup {
   group: string;
   items: NavItem[];
 }
-
 
 export default function AdminPage() {
   // Auth state
@@ -104,6 +106,7 @@ export default function AdminPage() {
   });
   const [donors, setDonors] = useState<Donor[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -142,6 +145,25 @@ export default function AdminPage() {
   const [donationFormMsg, setDonationFormMsg] = useState<string | null>(null);
   const [compressingImg, setCompressingImg] = useState<boolean>(false);
   const [savingDonation, setSavingDonation] = useState<boolean>(false);
+
+  // Member Form state
+  const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | number | null>(null);
+  const [memberFormData, setMemberFormData] = useState<MemberInput>({
+    name: '',
+    designation: '',
+    mobile: '',
+    bloodGroup: '',
+    image: null,
+    bio: '',
+    roleType: 'executive',
+    orderIndex: 0,
+    joinedAt: '',
+  });
+  const [memberFormMsg, setMemberFormMsg] = useState<string | null>(null);
+  const [savingMember, setSavingMember] = useState<boolean>(false);
+  const [compressingMemberImg, setCompressingMemberImg] = useState<boolean>(false);
+  const [memberSearch, setMemberSearch] = useState<string>('');
 
   // Gallery Form state
   const [galleryCaption, setGalleryCaption] = useState<string>('');
@@ -243,7 +265,15 @@ export default function AdminPage() {
         })
         .catch(() => {});
 
-      // 5. Gallery
+      // 5. Members (authorized)
+      fetch('/api/members', { headers })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.data)) setMembers(d.data);
+        })
+        .catch(() => {});
+
+      // 6. Gallery
       fetch('/api/gallery')
         .then((r) => r.json())
         .then((d) => {
@@ -251,7 +281,7 @@ export default function AdminPage() {
         })
         .catch(() => {});
 
-      // 6. Certificates (authorized)
+      // 7. Certificates (authorized)
       fetch('/api/certificates', { headers })
         .then((r) => r.json())
         .then((d) => {
@@ -259,7 +289,7 @@ export default function AdminPage() {
         })
         .catch(() => {});
 
-      // 7. Messages (authorized)
+      // 8. Messages (authorized)
       fetch('/api/contact', { headers })
         .then((r) => r.json())
         .then((d) => {
@@ -395,6 +425,106 @@ export default function AdminPage() {
         fetchAllData();
       } else {
         alert(data.message || 'Could not delete donor.');
+      }
+    } catch {
+      alert('Server error occurred.');
+    }
+  };
+
+  // Member handlers
+  const handleOpenAddMember = () => {
+    setEditingMemberId(null);
+    setMemberFormData({
+      name: '',
+      designation: '',
+      mobile: '',
+      bloodGroup: '',
+      image: null,
+      bio: '',
+      roleType: 'executive',
+      orderIndex: members.length + 1,
+      joinedAt: '',
+    });
+    setMemberFormMsg(null);
+    setShowMemberModal(true);
+  };
+
+  const handleEditMember = (m: Member) => {
+    setEditingMemberId(m.id);
+    setMemberFormData({
+      name: m.name,
+      designation: m.designation,
+      mobile: m.mobile || '',
+      bloodGroup: m.bloodGroup || '',
+      image: m.image || null,
+      bio: m.bio || '',
+      roleType: m.roleType || 'executive',
+      orderIndex: m.orderIndex || 0,
+      joinedAt: m.joinedAt || '',
+    });
+    setMemberFormMsg(null);
+    setShowMemberModal(true);
+  };
+
+  const handleMemberImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setCompressingMemberImg(true);
+      const base64 = await compressImage(file, 600, 600, 0.8);
+      setMemberFormData({ ...memberFormData, image: base64 });
+    } catch (err: any) {
+      alert('Image compression failed: ' + err?.message);
+    } finally {
+      setCompressingMemberImg(false);
+    }
+  };
+
+  const handleSaveMember = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSavingMember(true);
+    setMemberFormMsg(null);
+
+    try {
+      const url = editingMemberId ? `/api/members/${editingMemberId}` : '/api/members';
+      const method = editingMemberId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: getHeaders(),
+        body: JSON.stringify(memberFormData),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMemberFormMsg(editingMemberId ? 'Member updated successfully!' : 'Member added successfully!');
+        fetchAllData();
+        setTimeout(() => {
+          setShowMemberModal(false);
+          setMemberFormMsg(null);
+        }, 700);
+      } else {
+        setMemberFormMsg(data.message || 'Operation failed.');
+      }
+    } catch {
+      setMemberFormMsg('Network error occurred.');
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
+  const handleDeleteMember = async (id: string | number, name: string) => {
+    if (!confirm(`Are you sure you want to remove member "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/members/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAllData();
+      } else {
+        alert(data.message || 'Could not delete member.');
       }
     } catch {
       alert('Server error occurred.');
@@ -694,12 +824,23 @@ export default function AdminPage() {
     return matchGroup && matchQuery;
   });
 
+  const filteredMembers = members.filter((m) => {
+    const q = memberSearch.toLowerCase().trim();
+    return (
+      !q ||
+      m.name.toLowerCase().includes(q) ||
+      m.designation.toLowerCase().includes(q) ||
+      (m.mobile && m.mobile.includes(q))
+    );
+  });
+
   const navMenuItems: NavGroup[] = [
     {
       group: 'MANAGEMENT',
       items: [
         { id: 'adminDonors', label: 'Donors Directory', icon: Users, count: donors.length },
         { id: 'adminDonations', label: 'Donation Records', icon: FileText, count: donations.length },
+        { id: 'adminMembers', label: 'Members & Committee', icon: UserCheck, count: members.length },
         { id: 'adminCertificates', label: 'Certificate Generator', icon: Award, count: certificates.length },
         { id: 'adminGallery', label: 'Gallery Management', icon: ImageIcon, count: gallery.length },
       ],
@@ -1352,11 +1493,11 @@ export default function AdminPage() {
 
           <div className="admin-stat-card">
             <div>
-              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Certificates Issued</span>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Committee Members</span>
               <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                {(stats.totalCertificates || certificates.length).toLocaleString()}
+                {members.length}
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Generated & saved</span>
+              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Executives & Advisers</span>
             </div>
             <div
               style={{
@@ -1370,7 +1511,7 @@ export default function AdminPage() {
                 color: '#10b981',
               }}
             >
-              <Award size={22} />
+              <UserCheck size={22} />
             </div>
           </div>
 
@@ -1990,7 +2131,381 @@ export default function AdminPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: CERTIFICATES GENERATOR */}
+        {/* TAB 3: MEMBERS & COMMITTEE MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 'adminMembers' && (
+          <div className="admin-card" style={{ padding: '24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '14px',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: 800 }}>
+                  Organization Members & Executive Committee
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  Total {filteredMembers.length} active committee and general members
+                </p>
+              </div>
+
+              <button
+                onClick={handleOpenAddMember}
+                type="button"
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                }}
+              >
+                <Plus size={16} />
+                <span>Add New Member</span>
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ position: 'relative', maxWidth: '400px' }}>
+                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="Search members by name, role or phone..."
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  className="admin-search-input"
+                />
+              </div>
+            </div>
+
+            {/* Members Table */}
+            <div className="admin-table-container">
+              <div style={{ overflowX: 'auto' }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Photo</th>
+                      <th>Member Name</th>
+                      <th>Designation / Role</th>
+                      <th>Mobile Number</th>
+                      <th>Blood Group</th>
+                      <th>Category</th>
+                      <th>Order</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMembers.map((m) => (
+                      <tr key={m.id}>
+                        <td>
+                          {m.image ? (
+                            <img
+                              src={m.image}
+                              alt={m.name}
+                              style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '50%',
+                                background: '#fee2e2',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#dc2626',
+                                fontWeight: 700,
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              {m.name.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</td>
+                        <td>
+                          <span
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: '8px',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            {m.designation}
+                          </span>
+                        </td>
+                        <td>
+                          {m.mobile ? (
+                            <a href={`tel:${m.mobile}`} style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
+                              {m.mobile}
+                            </a>
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
+                        <td>
+                          {m.bloodGroup ? (
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                background: '#fee2e2',
+                                color: '#991b1b',
+                                fontWeight: 800,
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              {m.bloodGroup}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ color: '#475569', textTransform: 'capitalize', fontSize: '0.85rem' }}>
+                          {m.roleType === 'adviser' ? 'উপদেষ্টা' : m.roleType === 'executive' ? 'কার্যনির্বাহী' : 'সদস্য'}
+                        </td>
+                        <td style={{ color: '#64748b', fontWeight: 600 }}>{m.orderIndex || 0}</td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button
+                            onClick={() => handleEditMember(m)}
+                            type="button"
+                            className="admin-btn-action admin-btn-edit"
+                            style={{ marginRight: '6px' }}
+                            title="Edit member"
+                          >
+                            <Edit2 size={13} />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMember(m.id, m.name)}
+                            type="button"
+                            className="admin-btn-action admin-btn-delete"
+                            title="Remove member"
+                          >
+                            <Trash2 size={13} />
+                            <span>Delete</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredMembers.length === 0 && (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                          No committee or organization members recorded yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Member Add/Edit Modal */}
+            {showMemberModal && (
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(15, 23, 42, 0.5)',
+                  backdropFilter: 'blur(4px)',
+                  zIndex: 2000,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
+                }}
+              >
+                <div
+                  className="admin-card"
+                  style={{
+                    maxWidth: '560px',
+                    width: '100%',
+                    padding: '30px',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
+                      {editingMemberId ? 'Edit Member Details' : 'Add New Organization Member'}
+                    </h3>
+                    <button
+                      onClick={() => setShowMemberModal(false)}
+                      type="button"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {memberFormMsg && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        marginBottom: '18px',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        color: '#0f172a',
+                      }}
+                    >
+                      {memberFormMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveMember}>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Member Full Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. মোঃ হিশাম উদ্দিন"
+                          value={memberFormData.name}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Designation / Position *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. সভাপতি / সাধারণ সম্পাদক / উপদেষ্টা"
+                          value={memberFormData.designation}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, designation: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Category / Committee</label>
+                        <select
+                          value={memberFormData.roleType}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, roleType: e.target.value })}
+                        >
+                          <option value="executive">কার্যনির্বাহী পরিষদ (Executive)</option>
+                          <option value="adviser">উপদেষ্টা পরিষদ (Adviser)</option>
+                          <option value="member">সাধারণ সদস্য (Member)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Blood Group</label>
+                        <select
+                          value={memberFormData.bloodGroup || ''}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, bloodGroup: e.target.value })}
+                        >
+                          <option value="">-- নির্বাচন করুন --</option>
+                          {VALID_BLOOD_GROUPS.map((bg) => (
+                            <option key={bg} value={bg}>
+                              {bg}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Mobile Number (Admin only)</label>
+                        <input
+                          type="tel"
+                          placeholder="01XXXXXXXXX"
+                          value={memberFormData.mobile || ''}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, mobile: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Display Order Index (ক্রমিক)</label>
+                        <input
+                          type="number"
+                          placeholder="1, 2, 3..."
+                          value={memberFormData.orderIndex || 0}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, orderIndex: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="form-group full">
+                        <label>Profile Photo</label>
+                        <input type="file" accept="image/*" onChange={handleMemberImageUpload} />
+                        {compressingMemberImg && <span style={{ fontSize: '0.8rem', color: '#dc2626' }}>Compressing image...</span>}
+                        {memberFormData.image && (
+                          <div style={{ marginTop: '10px' }}>
+                            <img
+                              src={memberFormData.image}
+                              alt="Preview"
+                              style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dc2626' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group full">
+                        <label>Short Bio / Note (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. প্রতিষ্ঠাতাকালীন সদস্য"
+                          value={memberFormData.bio || ''}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, bio: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                      <button
+                        type="submit"
+                        disabled={savingMember || compressingMemberImg}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {savingMember ? 'Saving...' : editingMemberId ? 'Update Member' : 'Save Member'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowMemberModal(false)}
+                        style={{
+                          padding: '12px 18px',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 4: CERTIFICATES GENERATOR */}
         {/* ========================================================================= */}
         {activeTab === 'adminCertificates' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
@@ -2257,7 +2772,7 @@ export default function AdminPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 4: GALLERY MANAGEMENT */}
+        {/* TAB 5: GALLERY MANAGEMENT */}
         {/* ========================================================================= */}
         {activeTab === 'adminGallery' && (
           <div className="admin-card" style={{ padding: '24px' }}>
@@ -2403,7 +2918,7 @@ export default function AdminPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: CONTACT MESSAGES INBOX */}
+        {/* TAB 6: CONTACT MESSAGES INBOX */}
         {/* ========================================================================= */}
         {activeTab === 'adminMessages' && (
           <div className="admin-card" style={{ padding: '24px' }}>
@@ -2518,7 +3033,7 @@ export default function AdminPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 6: ANALYTICS */}
+        {/* TAB 7: ANALYTICS */}
         {/* ========================================================================= */}
         {activeTab === 'adminAnalytics' && (
           <div className="admin-card" style={{ padding: '24px' }}>
@@ -2577,7 +3092,7 @@ export default function AdminPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 7: SETTINGS & PASSWORD */}
+        {/* TAB 8: SETTINGS & PASSWORD */}
         {/* ========================================================================= */}
         {activeTab === 'adminSettings' && (
           <div className="admin-card" style={{ padding: '24px' }}>
