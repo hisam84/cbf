@@ -271,65 +271,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. QUICK BLOOD SEARCH CTA */}
-      <section style={{ padding: '30px 20px', background: '#DC2626', color: '#fff' }}>
-        <div
-          className="container"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '20px',
-          }}
-        >
-          <div>
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>জরুরি রক্তের প্রয়োজন?</h3>
-            <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
-              আমাদের ডেটাবেসে সকল রক্তের গ্রুপের নিবন্ধিত রক্তদাতা রয়েছে।
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <a
-              href="tel:+8801757831838"
-              style={{
-                background: '#fff',
-                color: '#DC2626',
-                padding: '10px 20px',
-                borderRadius: '30px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-              }}
-            >
-              <Phone size={18} />
-              ০১৭৫৭-৮৩১৮৩৮
-            </a>
-            <Link
-              href="/donors"
-              style={{
-                background: 'rgba(0,0,0,0.25)',
-                color: '#fff',
-                padding: '10px 20px',
-                borderRadius: '30px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.4)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              তালিকা দেখুন <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. QUICK BLOOD GROUP DIRECTORY */}
+      {/* 3. QUICK BLOOD GROUP DIRECTORY */}
       <section style={{ padding: '40px 20px', background: '#ffffff' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
