@@ -2482,6 +2482,258 @@ body:has(.admin-login-wrapper) {
     animation: spinIcon 0.8s linear infinite;
 }
 
+/* ==========================================================================
+   ADMIN MEMBERS & COMMITTEE RESPONSIVE STYLES
+   ========================================================================== */
+.admin-filter-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    max-width: 100%;
+}
 
+.admin-filter-scroll::-webkit-scrollbar {
+    height: 4px;
+}
 
+.admin-filter-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
 
+.admin-desktop-view {
+    display: block;
+}
+
+.admin-mobile-cards-view {
+    display: none;
+}
+
+.admin-member-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-member-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.admin-member-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-member-card-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid #fee2e2;
+}
+
+.admin-member-card-avatar-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    border: 2px solid #fee2e2;
+}
+
+.admin-member-card-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-member-card-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 1rem;
+    margin: 0 0 4px 0;
+    word-break: break-word;
+}
+
+.admin-member-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.admin-badge-executive {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.admin-badge-adviser {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.admin-badge-general {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.admin-badge-order {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.admin-badge-blood {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.admin-badge-role {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.admin-member-card-details {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.admin-member-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-member-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.admin-member-card-actions .admin-btn-action {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Modal and layout responsive tweaks */
+.admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.admin-modal-card {
+    max-width: 560px;
+    width: 100%;
+    padding: 28px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border-radius: 16px;
+}
+
+@media (max-width: 768px) {
+    .admin-desktop-view {
+        display: none !important;
+    }
+
+    .admin-mobile-cards-view {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .admin-card {
+        padding: 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .admin-card-header-responsive {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 14px !important;
+    }
+
+    .admin-card-header-responsive > button,
+    .admin-card-header-responsive > div > button {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .admin-modal-card {
+        padding: 20px 16px !important;
+        max-width: 100% !important;
+        border-radius: 14px !important;
+    }
+
+    .admin-main {
+        padding: 12px 10px !important;
+    }
+}

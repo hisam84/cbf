@@ -164,6 +164,7 @@ export default function AdminPage() {
   const [savingMember, setSavingMember] = useState<boolean>(false);
   const [compressingMemberImg, setCompressingMemberImg] = useState<boolean>(false);
   const [memberSearch, setMemberSearch] = useState<string>('');
+  const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'executive' | 'adviser' | 'member'>('all');
 
   // Gallery Form state
   const [galleryCaption, setGalleryCaption] = useState<string>('');
@@ -825,13 +826,20 @@ export default function AdminPage() {
   });
 
   const filteredMembers = members.filter((m) => {
+    const matchRole =
+      memberRoleFilter === 'all' ||
+      (memberRoleFilter === 'executive' && (m.roleType === 'executive' || !m.roleType)) ||
+      (memberRoleFilter === 'adviser' && m.roleType === 'adviser') ||
+      (memberRoleFilter === 'member' && m.roleType === 'member');
     const q = memberSearch.toLowerCase().trim();
-    return (
+    const matchQuery =
       !q ||
       m.name.toLowerCase().includes(q) ||
       m.designation.toLowerCase().includes(q) ||
-      (m.mobile && m.mobile.includes(q))
-    );
+      (m.mobile && m.mobile.includes(q)) ||
+      (m.bloodGroup && m.bloodGroup.toLowerCase().includes(q)) ||
+      (m.bio && m.bio.toLowerCase().includes(q));
+    return matchRole && matchQuery;
   });
 
   const navMenuItems: NavGroup[] = [
@@ -2136,6 +2144,7 @@ export default function AdminPage() {
         {activeTab === 'adminMembers' && (
           <div className="admin-card" style={{ padding: '24px' }}>
             <div
+              className="admin-card-header-responsive"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -2150,7 +2159,7 @@ export default function AdminPage() {
                   Organization Members & Executive Committee
                 </h3>
                 <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  Total {filteredMembers.length} active committee and general members
+                  Total {filteredMembers.length} of {members.length} members shown
                 </p>
               </div>
 
@@ -2177,182 +2186,383 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Search bar */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ position: 'relative', maxWidth: '400px' }}>
+            {/* Search and Category Filters */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
                 <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
-                  placeholder="Search members by name, role or phone..."
+                  placeholder="Search by name, role, phone or blood group..."
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
                   className="admin-search-input"
+                  style={{ paddingRight: memberSearch ? '38px' : '16px' }}
                 />
+                {memberSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setMemberSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94a3b8',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-filter-scroll">
+                <button
+                  type="button"
+                  onClick={() => setMemberRoleFilter('all')}
+                  className={`admin-filter-chip ${memberRoleFilter === 'all' ? 'active' : ''}`}
+                >
+                  সকল সদস্য ({members.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMemberRoleFilter('executive')}
+                  className={`admin-filter-chip ${memberRoleFilter === 'executive' ? 'active' : ''}`}
+                >
+                  কার্যনির্বাহী ({members.filter((m) => m.roleType === 'executive' || !m.roleType).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMemberRoleFilter('adviser')}
+                  className={`admin-filter-chip ${memberRoleFilter === 'adviser' ? 'active' : ''}`}
+                >
+                  উপদেষ্টা পরিষদ ({members.filter((m) => m.roleType === 'adviser').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMemberRoleFilter('member')}
+                  className={`admin-filter-chip ${memberRoleFilter === 'member' ? 'active' : ''}`}
+                >
+                  সাধারণ সদস্য ({members.filter((m) => m.roleType === 'member').length})
+                </button>
               </div>
             </div>
 
-            {/* Members Table */}
-            <div className="admin-table-container">
-              <div style={{ overflowX: 'auto' }}>
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Photo</th>
-                      <th>Member Name</th>
-                      <th>Designation / Role</th>
-                      <th>Mobile Number</th>
-                      <th>Blood Group</th>
-                      <th>Category</th>
-                      <th>Order</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMembers.map((m) => (
-                      <tr key={m.id}>
-                        <td>
-                          {m.image ? (
-                            <img
-                              src={m.image}
-                              alt={m.name}
-                              style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: '42px',
-                                height: '42px',
-                                borderRadius: '50%',
-                                background: '#fee2e2',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#dc2626',
-                                fontWeight: 700,
-                                fontSize: '0.85rem',
-                              }}
-                            >
-                              {m.name.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</td>
-                        <td>
-                          <span
-                            style={{
-                              padding: '3px 10px',
-                              borderRadius: '8px',
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              fontWeight: 700,
-                              fontSize: '0.8rem',
-                            }}
-                          >
-                            {m.designation}
-                          </span>
-                        </td>
-                        <td>
-                          {m.mobile ? (
-                            <a href={`tel:${m.mobile}`} style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
-                              {m.mobile}
-                            </a>
-                          ) : (
-                            <span style={{ color: '#94a3b8' }}>—</span>
-                          )}
-                        </td>
-                        <td>
-                          {m.bloodGroup ? (
-                            <span
-                              style={{
-                                padding: '2px 8px',
-                                borderRadius: '6px',
-                                background: '#fee2e2',
-                                color: '#991b1b',
-                                fontWeight: 800,
-                                fontSize: '0.8rem',
-                              }}
-                            >
-                              {m.bloodGroup}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ color: '#475569', textTransform: 'capitalize', fontSize: '0.85rem' }}>
-                          {m.roleType === 'adviser' ? 'উপদেষ্টা' : m.roleType === 'executive' ? 'কার্যনির্বাহী' : 'সদস্য'}
-                        </td>
-                        <td style={{ color: '#64748b', fontWeight: 600 }}>{m.orderIndex || 0}</td>
-                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <button
-                            onClick={() => handleEditMember(m)}
-                            type="button"
-                            className="admin-btn-action admin-btn-edit"
-                            style={{ marginRight: '6px' }}
-                            title="Edit member"
-                          >
-                            <Edit2 size={13} />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMember(m.id, m.name)}
-                            type="button"
-                            className="admin-btn-action admin-btn-delete"
-                            title="Remove member"
-                          >
-                            <Trash2 size={13} />
-                            <span>Delete</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredMembers.length === 0 && (
+            {/* 1. DESKTOP VIEW: Full Data Table */}
+            <div className="admin-desktop-view">
+              <div className="admin-table-container">
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
                       <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                          No committee or organization members recorded yet.
-                        </td>
+                        <th>Photo</th>
+                        <th>Member Name</th>
+                        <th>Designation / Role</th>
+                        <th>Mobile Number</th>
+                        <th>Blood Group</th>
+                        <th>Category</th>
+                        <th>Order</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map((m) => (
+                        <tr key={m.id}>
+                          <td>
+                            {m.image ? (
+                              <img
+                                src={m.image}
+                                alt={m.name}
+                                style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: '42px',
+                                  height: '42px',
+                                  borderRadius: '50%',
+                                  background: '#fee2e2',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#dc2626',
+                                  fontWeight: 700,
+                                  fontSize: '0.85rem',
+                                }}
+                              >
+                                {m.name.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</div>
+                            {m.bio && (
+                              <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>{m.bio}</div>
+                            )}
+                          </td>
+                          <td>
+                            <span className="admin-badge-role">
+                              {m.designation}
+                            </span>
+                          </td>
+                          <td>
+                            {m.mobile ? (
+                              <a
+                                href={`tel:${m.mobile}`}
+                                style={{
+                                  color: '#2563eb',
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                <Phone size={12} />
+                                <span>{m.mobile}</span>
+                              </a>
+                            ) : (
+                              <span style={{ color: '#94a3b8' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            {m.bloodGroup ? (
+                              <span className="admin-badge-blood">
+                                <Droplet size={11} fill="#dc2626" color="#dc2626" />
+                                <span>{m.bloodGroup}</span>
+                              </span>
+                            ) : (
+                              <span style={{ color: '#94a3b8' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                m.roleType === 'adviser'
+                                  ? 'admin-badge-adviser'
+                                  : m.roleType === 'executive' || !m.roleType
+                                  ? 'admin-badge-executive'
+                                  : 'admin-badge-general'
+                              }
+                            >
+                              {m.roleType === 'adviser'
+                                ? 'উপদেষ্টা পরিষদ'
+                                : m.roleType === 'executive' || !m.roleType
+                                ? 'কার্যনির্বাহী পরিষদ'
+                                : 'সাধারণ সদস্য'}
+                            </span>
+                          </td>
+                          <td style={{ color: '#64748b', fontWeight: 600 }}>{m.orderIndex || 0}</td>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <button
+                              onClick={() => handleEditMember(m)}
+                              type="button"
+                              className="admin-btn-action admin-btn-edit"
+                              style={{ marginRight: '6px' }}
+                              title="Edit member"
+                            >
+                              <Edit2 size={13} />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMember(m.id, m.name)}
+                              type="button"
+                              className="admin-btn-action admin-btn-delete"
+                              title="Remove member"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredMembers.length === 0 && (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                            No committee or organization members recorded yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+            </div>
+
+            {/* 2. MOBILE VIEW: Responsive Member Cards */}
+            <div className="admin-mobile-cards-view">
+              {filteredMembers.map((m) => (
+                <div key={m.id} className="admin-member-card">
+                  {/* Card Header: Avatar & Name */}
+                  <div className="admin-member-card-header">
+                    {m.image ? (
+                      <img src={m.image} alt={m.name} className="admin-member-card-avatar" />
+                    ) : (
+                      <div className="admin-member-card-avatar-fallback">
+                        {m.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="admin-member-card-title">
+                      <div className="admin-member-card-name">{m.name}</div>
+                      <div className="admin-member-card-badges">
+                        <span
+                          className={
+                            m.roleType === 'adviser'
+                              ? 'admin-badge-adviser'
+                              : m.roleType === 'executive' || !m.roleType
+                              ? 'admin-badge-executive'
+                              : 'admin-badge-general'
+                          }
+                        >
+                          {m.roleType === 'adviser'
+                            ? 'উপদেষ্টা'
+                            : m.roleType === 'executive' || !m.roleType
+                            ? 'কার্যনির্বাহী'
+                            : 'সদস্য'}
+                        </span>
+                        <span className="admin-badge-order">#{m.orderIndex || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Details: Role & Blood Group */}
+                  <div className="admin-member-card-details">
+                    <div className="admin-member-card-row">
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>পদবী / ভূমিকা:</span>
+                        <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{m.designation}</span>
+                      </div>
+                      {m.bloodGroup && (
+                        <div className="admin-badge-blood">
+                          <Droplet size={12} fill="#dc2626" color="#dc2626" />
+                          <span>{m.bloodGroup}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {m.mobile && (
+                      <div className="admin-member-card-row" style={{ paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>মোবাইল:</span>
+                        <a
+                          href={`tel:${m.mobile}`}
+                          style={{
+                            color: '#2563eb',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: '#eff6ff',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          <Phone size={12} />
+                          <span>{m.mobile}</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {m.bio && (
+                      <div style={{ fontSize: '0.78rem', color: '#475569', fontStyle: 'italic', paddingTop: '2px' }}>
+                        "{m.bio}"
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Actions Footer */}
+                  <div className="admin-member-card-actions">
+                    <button
+                      onClick={() => handleEditMember(m)}
+                      type="button"
+                      className="admin-btn-action admin-btn-edit"
+                    >
+                      <Edit2 size={14} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMember(m.id, m.name)}
+                      type="button"
+                      className="admin-btn-action admin-btn-delete"
+                    >
+                      <Trash2 size={14} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {filteredMembers.length === 0 && (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '36px 16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px dashed #cbd5e1',
+                  }}
+                >
+                  <Users size={32} color="#94a3b8" style={{ marginBottom: '8px' }} />
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>
+                    কোনো সদস্যের তথ্য পাওয়া যায়নি
+                  </p>
+                  {(memberSearch || memberRoleFilter !== 'all') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMemberSearch('');
+                        setMemberRoleFilter('all');
+                      }}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 14px',
+                        background: '#dc2626',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ফিল্টার রিসেট করুন
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Member Add/Edit Modal */}
             {showMemberModal && (
-              <div
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  backdropFilter: 'blur(4px)',
-                  zIndex: 2000,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '20px',
-                }}
-              >
-                <div
-                  className="admin-card"
-                  style={{
-                    maxWidth: '560px',
-                    width: '100%',
-                    padding: '30px',
-                    maxHeight: '90vh',
-                    overflowY: 'auto',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                  }}
-                >
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
                       {editingMemberId ? 'Edit Member Details' : 'Add New Organization Member'}
                     </h3>
                     <button
                       onClick={() => setShowMemberModal(false)}
                       type="button"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                      style={{
+                        background: '#f1f5f9',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#64748b',
+                        borderRadius: '8px',
+                        padding: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
                     >
-                      <X size={20} />
+                      <X size={18} />
                     </button>
                   </div>
 
@@ -2443,12 +2653,28 @@ export default function AdminPage() {
                         <input type="file" accept="image/*" onChange={handleMemberImageUpload} />
                         {compressingMemberImg && <span style={{ fontSize: '0.8rem', color: '#dc2626' }}>Compressing image...</span>}
                         {memberFormData.image && (
-                          <div style={{ marginTop: '10px' }}>
+                          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <img
                               src={memberFormData.image}
                               alt="Preview"
-                              style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dc2626' }}
+                              style={{ width: '54px', height: '54px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dc2626' }}
                             />
+                            <button
+                              type="button"
+                              onClick={() => setMemberFormData({ ...memberFormData, image: null })}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: '0.78rem',
+                                color: '#ef4444',
+                                background: '#fee2e2',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                              }}
+                            >
+                              Remove Photo
+                            </button>
                           </div>
                         )}
                       </div>
@@ -2463,12 +2689,13 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
                       <button
                         type="submit"
                         disabled={savingMember || compressingMemberImg}
                         style={{
                           flex: 1,
+                          minWidth: '130px',
                           padding: '12px',
                           background: '#dc2626',
                           color: '#ffffff',
