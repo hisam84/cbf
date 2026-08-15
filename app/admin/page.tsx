@@ -1443,23 +1443,17 @@ export default function AdminPage() {
         </div>
 
         {/* Overview Stats Cards (4 Grid) */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '18px',
-            marginBottom: '26px',
-          }}
-        >
+        <div className="admin-overview-grid">
           <div className="admin-stat-card">
             <div>
               <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Total Donors</span>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+              <div className="stat-val" style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                 {(stats.totalDonors || donors.length).toLocaleString()}
               </div>
               <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Active in database</span>
             </div>
             <div
+              className="stat-icon"
               style={{
                 width: '46px',
                 height: '46px',
@@ -1469,6 +1463,7 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#dc2626',
+                flexShrink: 0,
               }}
             >
               <Users size={22} />
@@ -1478,12 +1473,13 @@ export default function AdminPage() {
           <div className="admin-stat-card">
             <div>
               <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Donation Records</span>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+              <div className="stat-val" style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                 {(stats.totalDonations || donations.length).toLocaleString()}
               </div>
               <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>Documented activities</span>
             </div>
             <div
+              className="stat-icon"
               style={{
                 width: '46px',
                 height: '46px',
@@ -1493,6 +1489,7 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#2563eb',
+                flexShrink: 0,
               }}
             >
               <FileText size={22} />
@@ -1502,12 +1499,13 @@ export default function AdminPage() {
           <div className="admin-stat-card">
             <div>
               <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Committee Members</span>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+              <div className="stat-val" style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                 {members.length}
               </div>
               <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Executives & Advisers</span>
             </div>
             <div
+              className="stat-icon"
               style={{
                 width: '46px',
                 height: '46px',
@@ -1517,6 +1515,7 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#10b981',
+                flexShrink: 0,
               }}
             >
               <UserCheck size={22} />
@@ -1526,12 +1525,13 @@ export default function AdminPage() {
           <div className="admin-stat-card">
             <div>
               <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Unread Messages</span>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+              <div className="stat-val" style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                 {messages.filter((m) => !m.isRead).length}
               </div>
               <span style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 600 }}>{messages.length} total received</span>
             </div>
             <div
+              className="stat-icon"
               style={{
                 width: '46px',
                 height: '46px',
@@ -1541,6 +1541,7 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#8b5cf6',
+                flexShrink: 0,
               }}
             >
               <Mail size={22} />
@@ -1554,6 +1555,7 @@ export default function AdminPage() {
         {activeTab === 'adminDonors' && (
           <div className="admin-card" style={{ padding: '24px' }}>
             <div
+              className="admin-card-header-responsive"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1597,7 +1599,7 @@ export default function AdminPage() {
 
             {/* Filter and search bar */}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
                 <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
@@ -1605,16 +1607,40 @@ export default function AdminPage() {
                   value={donorSearch}
                   onChange={(e) => setDonorSearch(e.target.value)}
                   className="admin-search-input"
+                  style={{ paddingRight: donorSearch ? '38px' : '16px' }}
                 />
+                {donorSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setDonorSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94a3b8',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+              <div className="admin-filter-scroll">
                 <button
                   type="button"
                   onClick={() => setDonorGroupFilter('all')}
                   className={`admin-filter-chip ${donorGroupFilter === 'all' ? 'active' : ''}`}
                 >
-                  All
+                  All Donors ({donors.length})
                 </button>
                 {VALID_BLOOD_GROUPS.map((bg) => (
                   <button
@@ -1629,137 +1655,260 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Clean Donors Table */}
-            <div className="admin-table-container">
-              <div style={{ overflowX: 'auto' }}>
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Donor Name</th>
-                      <th>Mobile Number</th>
-                      <th>Group</th>
-                      <th>Address</th>
-                      <th>Last Donation</th>
-                      <th>Eligibility</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredDonors.map((donor) => {
-                      const eligibility = calculateEligibility(donor.lastDonation);
-                      return (
-                        <tr key={donor.id}>
-                          <td style={{ fontWeight: 700, color: '#0f172a' }}>{donor.name}</td>
-                          <td>
-                            <a href={`tel:${donor.mobile}`} style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
-                              {donor.mobile}
-                            </a>
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                background: '#fee2e2',
-                                color: '#991b1b',
-                                fontWeight: 800,
-                                fontSize: '0.8rem',
-                              }}
-                            >
-                              {donor.bloodGroup}
-                            </span>
-                          </td>
-                          <td style={{ color: '#475569' }}>{donor.address}</td>
-                          <td style={{ color: '#64748b' }}>
-                            {donor.lastDonation || 'None recorded'}
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                padding: '3px 10px',
-                                borderRadius: '12px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                background: eligibility.isEligible ? '#dcfce7' : '#fef3c7',
-                                color: eligibility.isEligible ? '#166534' : '#92400e',
-                                border: `1px solid ${eligibility.isEligible ? '#bbf7d0' : '#fde68a'}`,
-                              }}
-                            >
-                              {eligibility.isEligible ? 'Eligible' : `Wait (${eligibility.daysUntilEligible}d)`}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <button
-                              onClick={() => handleEditDonor(donor)}
-                              type="button"
-                              className="admin-btn-action admin-btn-edit"
-                              style={{ marginRight: '6px' }}
-                              title="Edit donor details"
-                            >
-                              <Edit2 size={13} />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDonor(donor.id, donor.name)}
-                              type="button"
-                              className="admin-btn-action admin-btn-delete"
-                              title="Delete donor"
-                            >
-                              <Trash2 size={13} />
-                              <span>Delete</span>
-                            </button>
+            {/* 1. DESKTOP VIEW: Full Donors Table */}
+            <div className="admin-desktop-view">
+              <div className="admin-table-container">
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Donor Name</th>
+                        <th>Mobile Number</th>
+                        <th>Group</th>
+                        <th>Address</th>
+                        <th>Last Donation</th>
+                        <th>Eligibility</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDonors.map((donor) => {
+                        const eligibility = calculateEligibility(donor.lastDonation);
+                        return (
+                          <tr key={donor.id}>
+                            <td style={{ fontWeight: 700, color: '#0f172a' }}>{donor.name}</td>
+                            <td>
+                              <a href={`tel:${donor.mobile}`} style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
+                                {donor.mobile}
+                              </a>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  background: '#fee2e2',
+                                  color: '#991b1b',
+                                  fontWeight: 800,
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                {donor.bloodGroup}
+                              </span>
+                            </td>
+                            <td style={{ color: '#475569' }}>{donor.address}</td>
+                            <td style={{ color: '#64748b' }}>
+                              {donor.lastDonation || 'None recorded'}
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  padding: '3px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  background: eligibility.isEligible ? '#dcfce7' : '#fef3c7',
+                                  color: eligibility.isEligible ? '#166534' : '#92400e',
+                                  border: `1px solid ${eligibility.isEligible ? '#bbf7d0' : '#fde68a'}`,
+                                }}
+                              >
+                                {eligibility.isEligible ? 'Eligible' : `Wait (${eligibility.daysUntilEligible}d)`}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <button
+                                onClick={() => handleEditDonor(donor)}
+                                type="button"
+                                className="admin-btn-action admin-btn-edit"
+                                style={{ marginRight: '6px' }}
+                                title="Edit donor details"
+                              >
+                                <Edit2 size={13} />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDonor(donor.id, donor.name)}
+                                type="button"
+                                className="admin-btn-action admin-btn-delete"
+                                title="Delete donor"
+                              >
+                                <Trash2 size={13} />
+                                <span>Delete</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredDonors.length === 0 && (
+                        <tr>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                            No donors found matching your search.
                           </td>
                         </tr>
-                      );
-                    })}
-                    {filteredDonors.length === 0 && (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                          No donors found matching your search.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+            </div>
+
+            {/* 2. MOBILE VIEW: Responsive Donor Cards */}
+            <div className="admin-mobile-cards-view">
+              {filteredDonors.map((donor) => {
+                const eligibility = calculateEligibility(donor.lastDonation);
+                return (
+                  <div key={donor.id} className="admin-donor-card">
+                    {/* Header: Name and Blood Group */}
+                    <div className="admin-donor-card-header">
+                      <div>
+                        <h4 className="admin-donor-card-name">{donor.name}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#64748b', marginTop: '3px' }}>
+                          <MapPin size={13} color="#94a3b8" />
+                          <span>{donor.address}</span>
+                        </div>
+                      </div>
+                      <span className="admin-badge-blood">
+                        <Droplet size={12} fill="#dc2626" color="#dc2626" />
+                        <span>{donor.bloodGroup}</span>
+                      </span>
+                    </div>
+
+                    {/* Details Box */}
+                    <div className="admin-donor-card-details">
+                      <div className="admin-donor-card-row">
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>মোবাইল নম্বর:</span>
+                        <a
+                          href={`tel:${donor.mobile}`}
+                          style={{
+                            color: '#2563eb',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#eff6ff',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.82rem',
+                          }}
+                        >
+                          <Phone size={12} />
+                          <span>{donor.mobile}</span>
+                        </a>
+                      </div>
+
+                      <div className="admin-donor-card-row">
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>সর্বশেষ রক্তদান:</span>
+                        <span style={{ fontWeight: 600, color: '#334155', fontSize: '0.82rem' }}>
+                          {donor.lastDonation || 'তথ্য নেই'}
+                        </span>
+                      </div>
+
+                      <div className="admin-donor-card-row" style={{ paddingTop: '2px' }}>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>যোগ্যতা:</span>
+                        <span
+                          style={{
+                            padding: '3px 9px',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: eligibility.isEligible ? '#dcfce7' : '#fef3c7',
+                            color: eligibility.isEligible ? '#166534' : '#92400e',
+                            border: `1px solid ${eligibility.isEligible ? '#bbf7d0' : '#fde68a'}`,
+                          }}
+                        >
+                          {eligibility.isEligible ? 'রক্তদানের জন্য প্রস্তুত' : `অপেক্ষা করুন (${eligibility.daysUntilEligible} দিন)`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions Footer */}
+                    <div className="admin-donor-card-actions">
+                      <button
+                        onClick={() => handleEditDonor(donor)}
+                        type="button"
+                        className="admin-btn-action admin-btn-edit"
+                      >
+                        <Edit2 size={14} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDonor(donor.id, donor.name)}
+                        type="button"
+                        className="admin-btn-action admin-btn-delete"
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredDonors.length === 0 && (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '36px 16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px dashed #cbd5e1',
+                  }}
+                >
+                  <Users size={32} color="#94a3b8" style={{ marginBottom: '8px' }} />
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>
+                    কোনো রক্তদাতার তথ্য পাওয়া যায়নি
+                  </p>
+                  {(donorSearch || donorGroupFilter !== 'all') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDonorSearch('');
+                        setDonorGroupFilter('all');
+                      }}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 14px',
+                        background: '#dc2626',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ফিল্টার রিসেট করুন
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Donor Add/Edit Modal */}
             {showDonorModal && (
-              <div
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  backdropFilter: 'blur(4px)',
-                  zIndex: 2000,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '20px',
-                }}
-              >
-                <div
-                  className="admin-card"
-                  style={{
-                    maxWidth: '560px',
-                    width: '100%',
-                    padding: '30px',
-                    maxHeight: '90vh',
-                    overflowY: 'auto',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                  }}
-                >
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
                       {editingDonorId ? 'Edit Donor Profile' : 'Add New Volunteer Donor'}
                     </h3>
                     <button
                       onClick={() => setShowDonorModal(false)}
                       type="button"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                      style={{
+                        background: '#f1f5f9',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#64748b',
+                        borderRadius: '8px',
+                        padding: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
                     >
-                      <X size={20} />
+                      <X size={18} />
                     </button>
                   </div>
 
@@ -1835,12 +1984,13 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
                       <button
                         type="submit"
                         disabled={savingDonor}
                         style={{
                           flex: 1,
+                          minWidth: '130px',
                           padding: '12px',
                           background: '#dc2626',
                           color: '#ffffff',
@@ -1880,7 +2030,7 @@ export default function AdminPage() {
         {/* TAB 2: DONATIONS MANAGEMENT */}
         {/* ========================================================================= */}
         {activeTab === 'adminDonations' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+          <div className="admin-tab-two-col">
             {/* Add Donation Form */}
             <div className="admin-card" style={{ padding: '24px' }}>
               <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
@@ -1980,22 +2130,17 @@ export default function AdminPage() {
                       placeholder="e.g. Emergency voluntary donation at Sadar Hospital..."
                       value={donationForm.notes || ''}
                       onChange={(e) => setDonationForm({ ...donationForm, notes: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        border: '1px solid #d1d5db',
-                      }}
                     ></textarea>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
                   <button
                     type="submit"
                     disabled={savingDonation || compressingImg}
                     style={{
                       flex: 1,
+                      minWidth: '130px',
                       padding: '12px',
                       background: '#dc2626',
                       color: '#ffffff',
@@ -2054,25 +2199,26 @@ export default function AdminPage() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '14px',
+                      gap: '12px',
                       padding: '14px',
                       borderRadius: '12px',
                       background: '#ffffff',
                       border: '1px solid #e2e8f0',
                       transition: 'all 0.2s ease',
+                      flexWrap: 'wrap',
                     }}
                   >
                     {d.image ? (
                       <img
                         src={d.image}
                         alt={d.donorName}
-                        style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'cover' }}
+                        style={{ width: '50px', height: '50px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
                       />
                     ) : (
                       <div
                         style={{
-                          width: '56px',
-                          height: '56px',
+                          width: '50px',
+                          height: '50px',
                           borderRadius: '10px',
                           background: '#fee2e2',
                           display: 'flex',
@@ -2082,11 +2228,11 @@ export default function AdminPage() {
                           flexShrink: 0,
                         }}
                       >
-                        <FileText size={22} />
+                        <FileText size={20} />
                       </div>
                     )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: '1 1 180px', minWidth: '150px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{d.donorName}</span>
                         <span
                           style={{
@@ -2101,14 +2247,14 @@ export default function AdminPage() {
                           {d.bloodGroup}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
                         Date: {d.date} | ID: {d.number}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {d.donorAddress}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
                       <button
                         onClick={() => handleEditDonation(d)}
                         type="button"
@@ -2116,6 +2262,7 @@ export default function AdminPage() {
                         title="Edit donation record"
                       >
                         <Edit2 size={13} />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => handleDeleteDonation(d.id)}
@@ -2735,7 +2882,7 @@ export default function AdminPage() {
         {/* TAB 4: CERTIFICATES GENERATOR */}
         {/* ========================================================================= */}
         {activeTab === 'adminCertificates' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+          <div className="admin-tab-two-col">
             {/* Left form controls */}
             <div className="admin-card" style={{ padding: '24px' }}>
               <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
@@ -2835,7 +2982,7 @@ export default function AdminPage() {
                   disabled={certLoading}
                   style={{
                     flex: 1,
-                    minWidth: '150px',
+                    minWidth: '140px',
                     padding: '12px',
                     background: '#dc2626',
                     color: '#ffffff',
@@ -2858,7 +3005,7 @@ export default function AdminPage() {
                   onClick={handleDownloadCert}
                   style={{
                     flex: 1,
-                    minWidth: '150px',
+                    minWidth: '140px',
                     padding: '12px',
                     background: '#2563eb',
                     color: '#ffffff',
@@ -2901,7 +3048,7 @@ export default function AdminPage() {
             </div>
 
             {/* Right preview canvas */}
-            <div className="admin-card" style={{ padding: '24px' }}>
+            <div className="admin-card" style={{ padding: '24px', overflowX: 'auto' }}>
               <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '14px' }}>
                 Live Certificate Preview
               </h3>
@@ -2910,37 +3057,40 @@ export default function AdminPage() {
                 ref={certRef}
                 style={{
                   background: '#ffffff',
-                  padding: '30px 24px',
+                  padding: '24px 16px',
                   borderRadius: '16px',
-                  border: '8px double #dc2626',
+                  border: '6px double #dc2626',
                   textAlign: 'center',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  minWidth: '280px',
+                  maxWidth: '100%',
+                  margin: '0 auto',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <img
                     src="/uploads/logo.png"
                     alt="Logo"
-                    style={{ width: '42px', height: '42px', borderRadius: '50%' }}
+                    style={{ width: '36px', height: '36px', borderRadius: '50%' }}
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                     }}
                   />
-                  <h4 style={{ color: '#dc2626', margin: 0, fontSize: '1.4rem' }}>Chavali Blood Foundation</h4>
+                  <h4 style={{ color: '#dc2626', margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Chavali Blood Foundation</h4>
                 </div>
-                <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '4px 0 14px 0' }}>
+                <p style={{ color: '#64748b', fontSize: '0.78rem', margin: '4px 0 12px 0' }}>
                   Serving Humanity with Every Drop
                 </p>
 
-                <div style={{ margin: '10px auto', borderBottom: '2px solid #dc2626', width: '60px' }}></div>
+                <div style={{ margin: '10px auto', borderBottom: '2px solid #dc2626', width: '50px' }}></div>
 
-                <h5 style={{ fontSize: '1.2rem', color: '#0f172a', margin: '10px 0', fontWeight: 700 }}>
+                <h5 style={{ fontSize: '1.1rem', color: '#0f172a', margin: '10px 0', fontWeight: 700 }}>
                   Certificate of Appreciation
                 </h5>
 
-                <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: '1.8', margin: '14px 0' }}>
+                <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: '1.7', margin: '12px 0' }}>
                   Presented with highest gratitude to{' '}
-                  <strong style={{ color: '#dc2626', fontSize: '1.15rem' }}>
+                  <strong style={{ color: '#dc2626', fontSize: '1.05rem' }}>
                     {certDonorName || '[Donor Name]'}
                   </strong>{' '}
                   for voluntarily donating blood through Chavali Blood Foundation to help save an invaluable human life.
@@ -2951,25 +3101,27 @@ export default function AdminPage() {
                     display: 'flex',
                     justifyContent: 'space-around',
                     background: '#fef2f2',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    margin: '16px 0',
+                    padding: '10px',
+                    borderRadius: '10px',
+                    margin: '14px 0',
                     border: '1px solid #fecaca',
+                    flexWrap: 'wrap',
+                    gap: '8px',
                   }}
                 >
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Blood Group</span>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Blood Group</span>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#dc2626' }}>
                       {certBloodGroup}
                     </div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Date</span>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{certDate}</div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Date</span>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>{certDate}</div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Certificate ID</span>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Certificate ID</span>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>
                       {certNumber || 'CBF-2026'}
                     </div>
                   </div>
@@ -2980,17 +3132,18 @@ export default function AdminPage() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'flex-end',
-                    marginTop: '36px',
-                    padding: '0 20px',
+                    marginTop: '28px',
+                    padding: '0 10px',
+                    gap: '12px',
                   }}
                 >
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ borderBottom: '1px solid #94a3b8', width: '100px', marginBottom: '4px' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: '#475569' }}>General Secretary</span>
+                    <div style={{ borderBottom: '1px solid #94a3b8', width: '80px', marginBottom: '4px' }}></div>
+                    <span style={{ fontSize: '0.72rem', color: '#475569' }}>General Secretary</span>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ borderBottom: '1px solid #94a3b8', width: '100px', marginBottom: '4px' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: '#475569' }}>President</span>
+                    <div style={{ borderBottom: '1px solid #94a3b8', width: '80px', marginBottom: '4px' }}></div>
+                    <span style={{ fontSize: '0.72rem', color: '#475569' }}>President</span>
                   </div>
                 </div>
               </div>
@@ -3074,13 +3227,7 @@ export default function AdminPage() {
               Current Gallery Photos ({gallery.length} Total)
             </h4>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '16px',
-              }}
-            >
+            <div className="admin-gallery-grid">
               {gallery.map((img) => (
                 <div
                   key={img.id}
@@ -3095,9 +3242,9 @@ export default function AdminPage() {
                   <img
                     src={img.data || img.imageData}
                     alt={img.caption || 'Gallery Photo'}
-                    style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '130px', objectFit: 'cover' }}
                   />
-                  <div style={{ padding: '12px' }}>
+                  <div style={{ padding: '10px 12px' }}>
                     <p
                       style={{
                         fontSize: '0.85rem',
@@ -3191,21 +3338,23 @@ export default function AdminPage() {
                           </span>
                         )}
                       </h4>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                         {msg.phone && (
-                          <a href={`tel:${msg.phone}`} style={{ marginRight: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
-                            {msg.phone}
+                          <a href={`tel:${msg.phone}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <Phone size={12} />
+                            <span>{msg.phone}</span>
                           </a>
                         )}
                         {msg.email && (
-                          <a href={`mailto:${msg.email}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
-                            {msg.email}
+                          <a href={`mailto:${msg.email}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <Mail size={12} />
+                            <span>{msg.email}</span>
                           </a>
                         )}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => handleToggleMessageRead(msg)}
                         type="button"
@@ -3247,7 +3396,7 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                  <p style={{ marginTop: '8px', color: '#475569', fontSize: '0.92rem', lineHeight: '1.6' }}>
+                  <p style={{ marginTop: '8px', color: '#475569', fontSize: '0.92rem', lineHeight: '1.6', wordBreak: 'break-word' }}>
                     {msg.message}
                   </p>
                 </div>
@@ -3268,14 +3417,7 @@ export default function AdminPage() {
               Blood Group Distribution & Analytics
             </h3>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '16px',
-                marginBottom: '30px',
-              }}
-            >
+            <div className="admin-analytics-grid">
               {VALID_BLOOD_GROUPS.map((bg) => {
                 const count = stats.bloodGroupBreakdown?.[bg] || 0;
                 const total = stats.totalDonors || 1;
@@ -3285,17 +3427,17 @@ export default function AdminPage() {
                   <div
                     key={bg}
                     style={{
-                      padding: '18px',
+                      padding: '16px',
                       borderRadius: '12px',
                       background: '#ffffff',
                       border: '1px solid #e2e8f0',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#dc2626' }}>{bg}</span>
-                      <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>{percent}%</span>
+                      <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#dc2626' }}>{bg}</span>
+                      <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>{percent}%</span>
                     </div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px', color: '#0f172a' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, marginTop: '6px', color: '#0f172a' }}>
                       {count} Donors
                     </div>
                     <div
@@ -3417,6 +3559,7 @@ export default function AdminPage() {
                   fontWeight: 700,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
+                  width: '100%',
                 }}
               >
                 {savingPwd ? 'Updating Password...' : 'Update Password'}

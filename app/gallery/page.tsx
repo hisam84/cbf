@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { GalleryItem } from '@/lib/types';
 import { toBengali } from '@/lib/image-compress';
-import { X, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon, ZoomIn, Calendar, Tag } from 'lucide-react';
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightboxImg, setLightboxImg] = useState<GalleryItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
@@ -28,6 +28,23 @@ export default function GalleryPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Close lightbox on Escape key & manage body scroll
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxImg(null);
+    };
+    if (lightboxImg) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [lightboxImg]);
+
   const filteredImages =
     selectedCategory === 'all'
       ? images
@@ -37,16 +54,17 @@ export default function GalleryPage() {
   const generalCount = images.filter((img) => img.category === 'general').length;
 
   return (
-    <section className="section" id="gallery" style={{ paddingTop: '40px' }}>
+    <section className="section gallery-section" id="gallery">
       <div className="container">
-        <div className="section-title">
+        {/* Section Header */}
+        <div className="section-title gallery-title-header">
           <h2>রক্তদান কার্যক্রম ও ফটো গ্যালারি</h2>
           <div className="underline"></div>
           <p>চাঁভালি রক্ত ফাউন্ডেশনের বিভিন্ন রক্তদান ক্যাম্পেইন ও সমাজকল্যাণমূলক কর্মকাণ্ডের চিত্র</p>
         </div>
 
-        {/* CATEGORY FILTER */}
-        <div className="donor-filters" style={{ marginBottom: '30px' }}>
+        {/* CATEGORY FILTER - Touch & Mobile Scroll Friendly */}
+        <div className="donor-filters gallery-filters-wrapper">
           <button
             type="button"
             className={`filter-btn ${selectedCategory === 'all' ? 'active' : ''}`}
@@ -70,54 +88,78 @@ export default function GalleryPage() {
           </button>
         </div>
 
+        {/* GALLERY CONTENT */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <p style={{ fontSize: '1.2rem', color: '#DC2626' }}>গ্যালারি লোড হচ্ছে...</p>
+          <div className="gallery-loading-state">
+            <div className="gallery-spinner"></div>
+            <p>গ্যালারি লোড হচ্ছে...</p>
           </div>
         ) : filteredImages.length > 0 ? (
           <div className="gallery-grid" id="galleryGrid">
-            {filteredImages.map((img, idx) => (
-              <div
-                className="gallery-item"
-                key={img.id || idx}
-                onClick={() => setLightboxImg(img.data || img.imageData || null)}
-                style={{ cursor: 'pointer' }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') setLightboxImg(img.data || img.imageData || null);
-                }}
-              >
-                <img
-                  src={img.data || img.imageData}
-                  alt={img.caption || 'Chavali Blood Activity'}
-                  loading="lazy"
-                />
-                <div className="gallery-overlay">
-                  <span>{img.caption || 'চাঁভালি রক্তদান কার্যক্রম'}</span>
+            {filteredImages.map((img, idx) => {
+              const imgSrc = img.data || img.imageData;
+              const captionText = img.caption || 'চাঁভালি রক্তদান কার্যক্রম';
+              const isDonation = img.category === 'donation';
+
+              return (
+                <div
+                  className="gallery-item"
+                  key={img.id || idx}
+                  onClick={() => setLightboxImg(img)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setLightboxImg(img);
+                    }
+                  }}
+                >
+                  {/* Category Pill Tag */}
+                  <span className={`gallery-tag ${isDonation ? 'donation' : 'general'}`}>
+                    {isDonation ? 'রক্তদান' : 'কার্যক্রম'}
+                  </span>
+
+                  {/* Photo with lazy loading */}
+                  <img
+                    src={imgSrc}
+                    alt={captionText}
+                    loading="lazy"
+                  />
+
+                  {/* Overlay with zoom icon and caption */}
+                  <div className="gallery-overlay">
+                    <div className="gallery-zoom-icon">
+                      <ZoomIn size={20} />
+                    </div>
+                    <span className="gallery-caption-text">{captionText}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              background: '#fff',
-              borderRadius: '16px',
-              boxShadow: 'var(--shadow)',
-            }}
-          >
-            <div style={{ display: 'inline-flex', padding: '16px', background: '#fee2e2', borderRadius: '50%', color: '#DC2626', marginBottom: '12px' }}>
+          <div className="gallery-empty-state">
+            <div className="gallery-empty-icon">
               <ImageIcon size={36} />
             </div>
-            <p style={{ fontSize: '1.1rem', color: '#6b7280' }}>এখনও কোনো ছবি আপলোড করা হয়নি।</p>
+            <h3>এখনও কোনো ছবি পাওয়া যায়নি</h3>
+            <p>এই ক্যাটাগরিতে এখনো কোনো ছবি আপলোড করা হয়নি।</p>
+            {selectedCategory !== 'all' && (
+              <button
+                type="button"
+                className="filter-btn active"
+                onClick={() => setSelectedCategory('all')}
+                style={{ marginTop: '12px' }}
+              >
+                সব ছবি দেখুন
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* LIGHTBOX */}
+      {/* LIGHTBOX MODAL */}
       {lightboxImg && (
         <div
           className="lightbox active"
@@ -127,14 +169,34 @@ export default function GalleryPage() {
         >
           <button
             className="lightbox-close"
-            onClick={() => setLightboxImg(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxImg(null);
+            }}
             type="button"
             aria-label="বন্ধ করুন"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={24} />
+            <X size={22} />
           </button>
-          <img src={lightboxImg} alt="Enlarged gallery photo" />
+
+          <div
+            className="lightbox-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightboxImg.data || lightboxImg.imageData}
+              alt={lightboxImg.caption || 'Enlarged photo'}
+              className="lightbox-image"
+            />
+            {lightboxImg.caption && (
+              <div className="lightbox-caption-box">
+                <span className="lightbox-tag">
+                  {lightboxImg.category === 'donation' ? 'রক্তদান কার্যক্রম' : 'ক্যাম্পেইন ও সমাবেশ'}
+                </span>
+                <p className="lightbox-caption">{lightboxImg.caption}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </section>
