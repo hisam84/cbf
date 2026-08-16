@@ -11,6 +11,14 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse>> 
   return NextResponse.json({
     success: true,
     valid: true,
-    admin: auth.admin ? { username: auth.admin.username, id: auth.admin.id } : undefined,
+    admin: auth.admin
+      ? {
+          id: auth.admin.id,
+          username: auth.admin.username,
+          name: auth.admin.name || auth.admin.username,
+          role: auth.admin.role || 'super_admin',
+          permissions: auth.admin.permissions || ['all'],
+        }
+      : undefined,
   });
 }

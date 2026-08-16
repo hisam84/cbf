@@ -19,6 +19,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Me
       const members = (await sql`
         SELECT id, name, designation, mobile, blood_group as "bloodGroup", 
                image, bio, role_type as "roleType", order_index as "orderIndex", 
+               monthly_fee as "monthlyFee",
                joined_at as "joinedAt", created_at as "createdAt", updated_at as "updatedAt"
         FROM members
         ORDER BY order_index ASC, created_at ASC;
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Me
       // Mask mobile number for public frontend queries
       const safeMembers = members.map((m) => ({
         ...m,
+        monthlyFee: Number(m.monthlyFee) || 0,
         mobile: isAdmin ? m.mobile : '', // Masked on public frontend
       }));
 
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     }
 
     const body = (await req.json().catch(() => ({}))) as MemberInput;
-    const { name, designation, mobile, bloodGroup, image, bio, roleType, orderIndex, joinedAt } = body;
+    const { name, designation, mobile, bloodGroup, image, bio, roleType, orderIndex, monthlyFee, joinedAt } = body;
 
     if (!name || !designation) {
       return NextResponse.json(
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     const formattedBloodGroup = bloodGroup ? bloodGroup.trim().toUpperCase() : null;
     const cleanRoleType = roleType ? sanitizeText(roleType) : 'executive';
     const cleanOrderIndex = Number.isInteger(Number(orderIndex)) ? Number(orderIndex) : 0;
+    const cleanMonthlyFee = Number.isFinite(Number(monthlyFee)) && Number(monthlyFee) >= 0 ? Number(monthlyFee) : 0;
     const cleanBio = bio ? sanitizeText(bio) : null;
     const cleanJoinedAt = joinedAt ? sanitizeText(joinedAt) : null;
 
@@ -93,17 +96,29 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         return NextResponse.json({ success: false, message: 'Database client not ready' }, { status: 500 });
       }
 
+      // If a positive order index is specified, shift existing members at that position and beyond by +1
+      if (cleanOrderIndex > 0) {
+        await sql`
+          UPDATE members
+          SET order_index = order_index + 1
+          WHERE order_index >= ${cleanOrderIndex};
+        `;
+      }
+
       const inserted = (await sql`
-        INSERT INTO members (name, designation, mobile, blood_group, image, bio, role_type, order_index, joined_at)
-        VALUES (${cleanName}, ${cleanDesignation}, ${normalizedMobile}, ${formattedBloodGroup}, ${image || null}, ${cleanBio}, ${cleanRoleType}, ${cleanOrderIndex}, ${cleanJoinedAt})
-        RETURNING id, name, designation, mobile, blood_group as "bloodGroup", image, bio, role_type as "roleType", order_index as "orderIndex", joined_at as "joinedAt", created_at as "createdAt", updated_at as "updatedAt";
+        INSERT INTO members (name, designation, mobile, blood_group, image, bio, role_type, order_index, monthly_fee, joined_at)
+        VALUES (${cleanName}, ${cleanDesignation}, ${normalizedMobile}, ${formattedBloodGroup}, ${image || null}, ${cleanBio}, ${cleanRoleType}, ${cleanOrderIndex}, ${cleanMonthlyFee}, ${cleanJoinedAt})
+        RETURNING id, name, designation, mobile, blood_group as "bloodGroup", image, bio, role_type as "roleType", order_index as "orderIndex", monthly_fee as "monthlyFee", joined_at as "joinedAt", created_at as "createdAt", updated_at as "updatedAt";
       `) as any[];
 
       return NextResponse.json(
         {
           success: true,
           message: 'Member added successfully to database',
-          data: inserted[0] as Member,
+          data: {
+            ...inserted[0],
+            monthlyFee: Number(inserted[0]?.monthlyFee) || 0,
+          } as Member,
         },
         { status: 201 }
       );
@@ -123,6 +138,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
           bio: cleanBio,
           roleType: cleanRoleType,
           orderIndex: cleanOrderIndex,
+          monthlyFee: cleanMonthlyFee,
           joinedAt: cleanJoinedAt,
           createdAt: new Date().toISOString(),
         },

@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 import { AuthVerificationResult, JWTPayload } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chavali_blood_foundation_default_jwt_secret_2026';
-const JWT_EXPIRES_IN = '7d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '2h';
 
 /**
  * Hash a plain text password with bcrypt
@@ -29,8 +29,14 @@ export async function comparePassword(plainPassword: string, hashedPassword?: st
 /**
  * Generate a signed JWT token for an admin user
  */
-export function generateToken(payload: { id: number | string; username: string }): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+export function generateToken(payload: {
+  id: number | string;
+  username: string;
+  name?: string;
+  role?: string;
+  permissions?: string[];
+}): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
 /**
@@ -48,7 +54,7 @@ export function verifyToken(token: string): JWTPayload | null {
 /**
  * Next.js Request authentication validator
  */
-export function verifyAdminRequest(req: Request | any): AuthVerificationResult {
+export function verifyAdminRequest(req: Request | any, requiredPermission?: string): AuthVerificationResult {
   let authHeader: string | null = null;
   let adminKey: string | null = null;
 
@@ -66,16 +72,42 @@ export function verifyAdminRequest(req: Request | any): AuthVerificationResult {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
-    if (decoded) {
-      return { authenticated: true, admin: { id: decoded.id, username: decoded.username } };
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded) {
+        // If permission is required, check if user has permission
+        if (requiredPermission && decoded.role !== 'super_admin') {
+          const userPerms = decoded.permissions || [];
+          if (!userPerms.includes('all') && !userPerms.includes(requiredPermission)) {
+            return {
+              authenticated: false,
+              error: `Forbidden: Missing required permission "${requiredPermission}"`,
+            };
+          }
+        }
+
+        return {
+          authenticated: true,
+          admin: {
+            id: decoded.id,
+            username: decoded.username,
+            name: decoded.name,
+            role: decoded.role,
+            permissions: decoded.permissions,
+          },
+        };
+      }
     }
   }
 
-  // Admin secret header check
-  if (adminKey === 'admin' || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-    return { authenticated: true, admin: { id: 1, username: 'admin' } };
+  // Admin secret key check (only if explicit ADMIN_API_SECRET is configured in environment)
+  const envAdminSecret = process.env.ADMIN_API_SECRET;
+  if (envAdminSecret && adminKey && adminKey === envAdminSecret) {
+    return {
+      authenticated: true,
+      admin: { id: 1, username: 'admin', name: 'Super Admin', role: 'super_admin', permissions: ['all'] },
+    };
   }
 
-  return { authenticated: false, error: 'Unauthorized: Invalid or missing token' };
+  return { authenticated: false, error: 'Unauthorized: Invalid or expired token' };
 }

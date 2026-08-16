@@ -55,10 +55,18 @@ export async function ensureTablesExist(): Promise<void> {
         id SERIAL PRIMARY KEY,
         username VARCHAR(100) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        name VARCHAR(255) DEFAULT 'Admin',
+        role VARCHAR(50) DEFAULT 'super_admin',
+        permissions JSONB DEFAULT '["all"]',
+        is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
     `;
+    await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Admin';`;
+    await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'super_admin';`;
+    await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '["all"]';`;
+    await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;`;
 
     // 2. Donors Table
     await sql`
@@ -157,13 +165,40 @@ export async function ensureTablesExist(): Promise<void> {
         bio TEXT,
         role_type VARCHAR(50) DEFAULT 'executive',
         order_index INT DEFAULT 0,
+        monthly_fee INT DEFAULT 0,
         joined_at VARCHAR(50),
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_members_order ON members(order_index ASC, created_at ASC);`;
+    // Safe column addition in case table already exists
+    await sql`ALTER TABLE members ADD COLUMN IF NOT EXISTS monthly_fee INT DEFAULT 0;`;
 
+    // 8. Member Dues & Subscription Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS member_dues (
+        id BIGSERIAL PRIMARY KEY,
+        member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        due_type VARCHAR(50) DEFAULT 'monthly',
+        billing_month VARCHAR(20),
+        amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'pending',
+        due_date VARCHAR(50),
+        payment_date VARCHAR(50),
+        payment_method VARCHAR(50),
+        payment_note TEXT,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_member_dues_member_id ON member_dues(member_id);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_member_dues_status ON member_dues(status);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_member_dues_billing_month ON member_dues(billing_month);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_member_dues_created_at ON member_dues(created_at DESC);`;
 
     // Seed initial admin if empty
     const defaultUser = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
@@ -174,8 +209,8 @@ export async function ensureTablesExist(): Promise<void> {
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(defaultPass, salt);
       await sql`
-        INSERT INTO admins (username, password_hash)
-        VALUES (${defaultUser}, ${hash})
+        INSERT INTO admins (username, password_hash, name, role, permissions, is_active)
+        VALUES (${defaultUser}, ${hash}, 'Super Admin', 'super_admin', '["all"]'::jsonb, TRUE)
         ON CONFLICT (username) DO NOTHING;
       `;
     }

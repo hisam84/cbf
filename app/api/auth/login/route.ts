@@ -31,15 +31,51 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 
       if (rows.length > 0) {
         const admin = rows[0];
+        if (admin.is_active === false) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'আপনার একাউন্টটি বর্তমানে নিষ্ক্রিয় রয়েছে। অনুগ্রহ করে সুপার এডমিনের সাথে যোগাযোগ করুন।',
+            },
+            { status: 403 }
+          );
+        }
+
         const isMatch = await comparePassword(password, admin.password_hash);
 
         if (isMatch) {
-          const token = generateToken({ id: admin.id, username: admin.username });
+          let userPerms: string[] = ['all'];
+          if (admin.permissions) {
+            if (Array.isArray(admin.permissions)) {
+              userPerms = admin.permissions;
+            } else if (typeof admin.permissions === 'string') {
+              try {
+                userPerms = JSON.parse(admin.permissions);
+              } catch {
+                userPerms = [admin.permissions];
+              }
+            }
+          }
+
+          const token = generateToken({
+            id: admin.id,
+            username: admin.username,
+            name: admin.name || admin.username,
+            role: admin.role || 'super_admin',
+            permissions: userPerms,
+          });
+
           return NextResponse.json({
             success: true,
             message: 'লগইন সফল হয়েছে',
             token,
-            admin: { username: admin.username, id: admin.id },
+            admin: {
+              id: admin.id,
+              username: admin.username,
+              name: admin.name || admin.username,
+              role: admin.role || 'super_admin',
+              permissions: userPerms,
+            },
           });
         }
       }
@@ -50,12 +86,25 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     const defaultPass = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
 
     if (cleanUsername === defaultUser && password === defaultPass) {
-      const token = generateToken({ id: 1, username: defaultUser });
+      const defaultPerms = ['all'];
+      const token = generateToken({
+        id: 1,
+        username: defaultUser,
+        name: 'Super Admin',
+        role: 'super_admin',
+        permissions: defaultPerms,
+      });
       return NextResponse.json({
         success: true,
         message: 'লগইন সফল হয়েছে (ডিফল্ট এডমিন)',
         token,
-        admin: { username: defaultUser, id: 1 },
+        admin: {
+          id: 1,
+          username: defaultUser,
+          name: 'Super Admin',
+          role: 'super_admin',
+          permissions: defaultPerms,
+        },
       });
     }
 

@@ -3315,3 +3315,221 @@ body:has(.admin-login-wrapper) {
     }
 }
 
+/* ==================== MEMBER DUES & PAYMENTS STYLES ==================== */
+.admin-badge-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.admin-badge-paid {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.admin-badge-partial {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+}
+
+.admin-badge-monthly {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.admin-badge-event {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #ffe4e6;
+    color: #be123c;
+}
+
+.admin-btn-pay {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.admin-btn-pay:hover {
+    background: #a7f3d0;
+    color: #065f46;
+}
+
+.admin-btn-receipt {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+.admin-btn-receipt:hover {
+    background: #e2e8f0;
+}
+
+/* Printable Due Receipt */
+.due-receipt-card {
+    background: #ffffff;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 28px;
+    color: #0f172a;
+    max-width: 480px;
+    margin: 0 auto;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .due-receipt-card, .due-receipt-card * {
+        visibility: visible;
+    }
+    .due-receipt-card {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+}
+
+/* User & Permission Management Styles */
+.user-status-active {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-status-inactive {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-role-super {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-role-sub {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.perm-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.perm-checkbox-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.perm-checkbox-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.perm-checkbox-card.checked {
+    border-color: #dc2626;
+    background: #fef2f2;
+}
+
+.perm-checkbox-card input[type="checkbox"] {
+    margin-top: 3px;
+    accent-color: #dc2626;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.perm-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    background: #f1f5f9;
+    color: #334155;
+    border-radius: 4px;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+}
+
+
+

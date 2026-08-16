@@ -17,7 +17,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = (await req.json().catch(() => ({}))) as MemberInput;
-    const { name, designation, mobile, bloodGroup, image, bio, roleType, orderIndex, joinedAt } = body;
+    const { name, designation, mobile, bloodGroup, image, bio, roleType, orderIndex, monthlyFee, joinedAt } = body;
 
     if (!name || !designation) {
       return NextResponse.json(
@@ -32,6 +32,7 @@ export async function PUT(
     const formattedBloodGroup = bloodGroup ? bloodGroup.trim().toUpperCase() : null;
     const cleanRoleType = roleType ? sanitizeText(roleType) : 'executive';
     const cleanOrderIndex = Number.isInteger(Number(orderIndex)) ? Number(orderIndex) : 0;
+    const cleanMonthlyFee = Number.isFinite(Number(monthlyFee)) && Number(monthlyFee) >= 0 ? Number(monthlyFee) : 0;
     const cleanBio = bio ? sanitizeText(bio) : null;
     const cleanJoinedAt = joinedAt ? sanitizeText(joinedAt) : null;
 
@@ -39,6 +40,42 @@ export async function PUT(
       const sql = getSql();
       if (!sql) {
         return NextResponse.json({ success: false, message: 'Database client not ready' }, { status: 500 });
+      }
+
+      // Check existing member's current order index
+      const existingRows = (await sql`SELECT id, order_index FROM members WHERE id = ${id};`) as any[];
+      if (existingRows.length === 0) {
+        return NextResponse.json({ success: false, message: 'Member not found' }, { status: 404 });
+      }
+
+      const oldOrderIndex = Number(existingRows[0].order_index) || 0;
+
+      // If order index changed and is positive, reorder affected members
+      if (cleanOrderIndex > 0 && oldOrderIndex !== cleanOrderIndex) {
+        if (oldOrderIndex > 0) {
+          if (cleanOrderIndex < oldOrderIndex) {
+            // Moving to a higher rank (e.g. from 10 to 5): Shift 5..9 by +1
+            await sql`
+              UPDATE members
+              SET order_index = order_index + 1
+              WHERE order_index >= ${cleanOrderIndex} AND order_index < ${oldOrderIndex} AND id != ${id};
+            `;
+          } else {
+            // Moving down (e.g. from 5 to 10): Shift 6..10 by -1
+            await sql`
+              UPDATE members
+              SET order_index = order_index - 1
+              WHERE order_index <= ${cleanOrderIndex} AND order_index > ${oldOrderIndex} AND id != ${id};
+            `;
+          }
+        } else {
+          // Previously 0 or unassigned, shift everyone >= cleanOrderIndex by +1
+          await sql`
+            UPDATE members
+            SET order_index = order_index + 1
+            WHERE order_index >= ${cleanOrderIndex} AND id != ${id};
+          `;
+        }
       }
 
       const updated = (await sql`
@@ -51,10 +88,11 @@ export async function PUT(
             bio = ${cleanBio},
             role_type = ${cleanRoleType},
             order_index = ${cleanOrderIndex},
+            monthly_fee = ${cleanMonthlyFee},
             joined_at = ${cleanJoinedAt},
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
-        RETURNING id, name, designation, mobile, blood_group as "bloodGroup", image, bio, role_type as "roleType", order_index as "orderIndex", joined_at as "joinedAt", created_at as "createdAt", updated_at as "updatedAt";
+        RETURNING id, name, designation, mobile, blood_group as "bloodGroup", image, bio, role_type as "roleType", order_index as "orderIndex", monthly_fee as "monthlyFee", joined_at as "joinedAt", created_at as "createdAt", updated_at as "updatedAt";
       `) as any[];
 
       if (updated.length === 0) {
@@ -64,7 +102,10 @@ export async function PUT(
       return NextResponse.json({
         success: true,
         message: 'Member updated successfully',
-        data: updated[0] as Member,
+        data: {
+          ...updated[0],
+          monthlyFee: Number(updated[0]?.monthlyFee) || 0,
+        } as Member,
       });
     }
 
@@ -81,6 +122,7 @@ export async function PUT(
         bio: cleanBio,
         roleType: cleanRoleType,
         orderIndex: cleanOrderIndex,
+        monthlyFee: cleanMonthlyFee,
         joinedAt: cleanJoinedAt,
       },
     });

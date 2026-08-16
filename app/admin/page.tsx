@@ -10,6 +10,13 @@ import {
   DonationInput,
   Member,
   MemberInput,
+  MemberDue,
+  MemberDueInput,
+  DuePaymentInput,
+  AdminUser,
+  AdminUserInput,
+  AdminPermissionKey,
+  PERMISSIONS_LIST,
   Certificate,
   GalleryItem,
   ContactMessage,
@@ -53,16 +60,33 @@ import {
   UserCheck,
   Send,
   SlidersHorizontal,
+  CreditCard,
+  Receipt,
+  DollarSign,
+  Wallet,
+  CircleDollarSign,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Printer,
+  Layers,
+  UserPlus,
+  CheckSquare,
+  Square,
+  Shield,
+  UserCog,
 } from 'lucide-react';
 
 type AdminTab =
   | 'adminDonors'
   | 'adminDonations'
   | 'adminMembers'
+  | 'adminDues'
   | 'adminCertificates'
   | 'adminGallery'
   | 'adminMessages'
   | 'adminAnalytics'
+  | 'adminUsers'
   | 'adminSettings';
 
 interface NavItem {
@@ -71,6 +95,7 @@ interface NavItem {
   icon: any;
   count?: number;
   badge?: number;
+  perm?: AdminPermissionKey;
 }
 
 interface NavGroup {
@@ -82,6 +107,7 @@ export default function AdminPage() {
   // Auth state
   const [token, setToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
@@ -107,9 +133,26 @@ export default function AdminPage() {
   const [donors, setDonors] = useState<Donor[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [dues, setDues] = useState<MemberDue[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
+
+  // User Management state
+  const [showUserModal, setShowUserModal] = useState<boolean>(false);
+  const [editingUserId, setEditingUserId] = useState<string | number | null>(null);
+  const [userFormData, setUserFormData] = useState<AdminUserInput>({
+    username: '',
+    password: '',
+    name: '',
+    role: 'sub_admin',
+    permissions: ['donors', 'donations', 'members'],
+    isActive: true,
+  });
+  const [userFormMsg, setUserFormMsg] = useState<string | null>(null);
+  const [savingUser, setSavingUser] = useState<boolean>(false);
+  const [userSearch, setUserSearch] = useState<string>('');
 
   // Donor Search & Filter
   const [donorSearch, setDonorSearch] = useState<string>('');
@@ -158,6 +201,7 @@ export default function AdminPage() {
     bio: '',
     roleType: 'executive',
     orderIndex: 0,
+    monthlyFee: 0,
     joinedAt: '',
   });
   const [memberFormMsg, setMemberFormMsg] = useState<string | null>(null);
@@ -165,6 +209,66 @@ export default function AdminPage() {
   const [compressingMemberImg, setCompressingMemberImg] = useState<boolean>(false);
   const [memberSearch, setMemberSearch] = useState<string>('');
   const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'executive' | 'adviser' | 'member'>('all');
+
+  // Member Dues & Payments state
+  const [dueStatusFilter, setDueStatusFilter] = useState<string>('all');
+  const [dueTypeFilter, setDueTypeFilter] = useState<string>('all');
+  const [dueSearchQuery, setDueSearchQuery] = useState<string>('');
+  const [dueMemberFilter, setDueMemberFilter] = useState<string>('all');
+
+  // Add Due Modal
+  const [showAddDueModal, setShowAddDueModal] = useState<boolean>(false);
+  const [addDueForm, setAddDueForm] = useState<MemberDueInput>({
+    targetType: 'single',
+    memberId: '',
+    title: '',
+    dueType: 'event',
+    amount: 0,
+    dueDate: '',
+    notes: '',
+  });
+  const [addDueMsg, setAddDueMsg] = useState<string | null>(null);
+  const [savingDue, setSavingDue] = useState<boolean>(false);
+
+  // Pay Due Modal
+  const [showPayModal, setShowPayModal] = useState<boolean>(false);
+  const [payingDue, setPayingDue] = useState<MemberDue | null>(null);
+  const [payForm, setPayForm] = useState<DuePaymentInput>({
+    paidAmount: 0,
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMethod: 'cash',
+    paymentNote: '',
+  });
+  const [payMsg, setPayMsg] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState<boolean>(false);
+
+  // Edit Due Modal
+  const [showEditDueModal, setShowEditDueModal] = useState<boolean>(false);
+  const [editingDue, setEditingDue] = useState<MemberDue | null>(null);
+  const [editDueForm, setEditDueForm] = useState<{
+    title: string;
+    amount: number;
+    paidAmount: number;
+    status: string;
+    dueDate: string;
+    notes: string;
+  }>({
+    title: '',
+    amount: 0,
+    paidAmount: 0,
+    status: 'pending',
+    dueDate: '',
+    notes: '',
+  });
+  const [editDueMsg, setEditDueMsg] = useState<string | null>(null);
+  const [savingEditDue, setSavingEditDue] = useState<boolean>(false);
+
+  // Receipt Modal
+  const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
+  const [receiptDue, setReceiptDue] = useState<MemberDue | null>(null);
+
+  // Generating monthly dues
+  const [generatingMonthly, setGeneratingMonthly] = useState<boolean>(false);
 
   // Gallery Form state
   const [galleryCaption, setGalleryCaption] = useState<string>('');
@@ -193,12 +297,18 @@ export default function AdminPage() {
   const [pwdMsg, setPwdMsg] = useState<string | null>(null);
   const [savingPwd, setSavingPwd] = useState<boolean>(false);
 
-  // 1. Initial auth check
+  // 1. Initial auth check & cleanup of old localStorage tokens
   useEffect(() => {
-    const savedToken = localStorage.getItem('cbf_admin_token');
+    // Clean up any lingering token from older versions
+    localStorage.removeItem('cbf_admin_token');
+
+    // Only restore session if active in current browser session
+    const savedToken = sessionStorage.getItem('cbf_admin_token');
     if (savedToken) {
       setToken(savedToken);
       verifyToken(savedToken);
+    } else {
+      setIsLoggedIn(false);
     }
   }, []);
 
@@ -209,6 +319,37 @@ export default function AdminPage() {
     }
   }, [isLoggedIn]);
 
+  // 3. Inactivity timeout (Auto-logout after 30 minutes of idle time)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    let timeoutId: NodeJS.Timeout;
+    const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        handleLogout('নিরাপত্তার স্বার্থে ৩০ মিনিট নিষ্ক্রিয় থাকার পর সেশন স্বয়ংক্রিয়ভাবে সমাপ্ত হয়েছে। পুনরায় লগইন করুন।');
+      }, INACTIVITY_LIMIT_MS);
+    };
+
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((evt) => window.addEventListener(evt, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, resetTimer));
+    };
+  }, [isLoggedIn]);
+
+  const hasPermission = (permKey: AdminPermissionKey): boolean => {
+    if (!currentUser) return true; // Default while loading or super admin
+    if (currentUser.role === 'super_admin') return true;
+    if (currentUser.permissions?.includes('all')) return true;
+    return Boolean(currentUser.permissions?.includes(permKey));
+  };
+
   const verifyToken = async (jwtToken: string) => {
     try {
       const res = await fetch('/api/auth/verify', {
@@ -217,14 +358,19 @@ export default function AdminPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setIsLoggedIn(true);
+        if (data.admin) setCurrentUser(data.admin);
       } else {
+        sessionStorage.removeItem('cbf_admin_token');
         localStorage.removeItem('cbf_admin_token');
         setToken(null);
+        setCurrentUser(null);
         setIsLoggedIn(false);
       }
     } catch {
+      sessionStorage.removeItem('cbf_admin_token');
       localStorage.removeItem('cbf_admin_token');
       setToken(null);
+      setCurrentUser(null);
       setIsLoggedIn(false);
     }
   };
@@ -252,29 +398,60 @@ export default function AdminPage() {
 
       // 3. Donors (authorized)
       fetch('/api/donors', { headers })
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
         .then((d) => {
-          if (d.success && Array.isArray(d.data)) setDonors(d.data);
+          if (d && d.success && Array.isArray(d.data)) setDonors(d.data);
         })
         .catch(() => {});
 
       // 4. Donations (authorized)
       fetch('/api/donations', { headers })
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
         .then((d) => {
-          if (d.success && Array.isArray(d.data)) setDonations(d.data);
+          if (d && d.success && Array.isArray(d.data)) setDonations(d.data);
         })
         .catch(() => {});
 
       // 5. Members (authorized)
       fetch('/api/members', { headers })
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
         .then((d) => {
-          if (d.success && Array.isArray(d.data)) setMembers(d.data);
+          if (d && d.success && Array.isArray(d.data)) setMembers(d.data);
         })
         .catch(() => {});
 
-      // 6. Gallery
+      // 6. Member Dues & Subscription (authorized)
+      fetch('/api/dues', { headers })
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
+        .then((d) => {
+          if (d && d.success && Array.isArray(d.data)) setDues(d.data);
+        })
+        .catch(() => {});
+
+      // 7. Users & Permissions (authorized)
+      fetch('/api/users', { headers })
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
+        .then((d) => {
+          if (d && d.success && Array.isArray(d.data)) setUsers(d.data);
+        })
+        .catch(() => {});
+
+      // 8. Gallery
       fetch('/api/gallery')
         .then((r) => r.json())
         .then((d) => {
@@ -282,19 +459,25 @@ export default function AdminPage() {
         })
         .catch(() => {});
 
-      // 7. Certificates (authorized)
+      // 9. Certificates (authorized)
       fetch('/api/certificates', { headers })
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
         .then((d) => {
-          if (d.success && Array.isArray(d.data)) setCertificates(d.data);
+          if (d && d.success && Array.isArray(d.data)) setCertificates(d.data);
         })
         .catch(() => {});
 
-      // 8. Messages (authorized)
+      // 10. Messages (authorized)
       fetch('/api/contact', { headers })
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) { handleLogout('সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগইন করুন।'); return null; }
+          return r.json();
+        })
         .then((d) => {
-          if (d.success && Array.isArray(d.data)) setMessages(d.data);
+          if (d && d.success && Array.isArray(d.data)) setMessages(d.data);
         })
         .catch(() => {});
     } finally {
@@ -304,7 +487,7 @@ export default function AdminPage() {
 
   const getHeaders = () => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const curToken = token || localStorage.getItem('cbf_admin_token');
+    const curToken = token || (typeof window !== 'undefined' ? sessionStorage.getItem('cbf_admin_token') : null);
     if (curToken) headers['Authorization'] = `Bearer ${curToken}`;
     return headers;
   };
@@ -323,30 +506,145 @@ export default function AdminPage() {
 
       const data = await res.json();
       if (res.ok && data.success && data.token) {
-        localStorage.setItem('cbf_admin_token', data.token);
+        sessionStorage.setItem('cbf_admin_token', data.token);
+        localStorage.removeItem('cbf_admin_token'); // Ensure clean state
         setToken(data.token);
         setIsLoggedIn(true);
+        if (data.admin) setCurrentUser(data.admin);
         setLoginForm({ username: '', password: '' });
       } else {
-        setLoginMessage(data.message || 'Invalid username or password.');
+        setLoginMessage(data.message || 'ভুল ইউজারনেম অথবা পাসওয়ার্ড');
       }
     } catch {
-      setLoginMessage('Network error occurred while connecting to the server.');
+      setLoginMessage('সার্ভারের সাথে সংযোগ করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     } finally {
       setLoadingLogin(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (messageOrEvent?: React.MouseEvent | string) => {
+    sessionStorage.removeItem('cbf_admin_token');
     localStorage.removeItem('cbf_admin_token');
     setToken(null);
+    setCurrentUser(null);
     setIsLoggedIn(false);
     setSidebarOpen(false);
+    if (typeof messageOrEvent === 'string') {
+      setLoginMessage(messageOrEvent);
+    }
   };
 
   const handleNavClick = (tabId: AdminTab) => {
     setActiveTab(tabId);
     setSidebarOpen(false);
+  };
+
+  // ----------------------------------------------------------------------------
+  // USER & PERMISSION MANAGEMENT HANDLERS
+  // ----------------------------------------------------------------------------
+  const handleOpenAddUser = () => {
+    setEditingUserId(null);
+    setUserFormData({
+      username: '',
+      password: '',
+      name: '',
+      role: 'sub_admin',
+      permissions: ['donors', 'donations', 'members'],
+      isActive: true,
+    });
+    setUserFormMsg(null);
+    setShowUserModal(true);
+  };
+
+  const handleOpenEditUser = (u: AdminUser) => {
+    setEditingUserId(u.id);
+    setUserFormData({
+      username: u.username,
+      password: '',
+      name: u.name || '',
+      role: u.role || 'sub_admin',
+      permissions: u.permissions || [],
+      isActive: u.isActive !== false,
+    });
+    setUserFormMsg(null);
+    setShowUserModal(true);
+  };
+
+  const handleTogglePermission = (permKey: AdminPermissionKey) => {
+    setUserFormData((prev) => {
+      const currentPerms = (prev.permissions || []) as AdminPermissionKey[];
+      if (currentPerms.includes(permKey)) {
+        return { ...prev, permissions: currentPerms.filter((p) => p !== permKey) };
+      } else {
+        return { ...prev, permissions: [...currentPerms, permKey] };
+      }
+    });
+  };
+
+  const handleSelectAllPermissions = () => {
+    setUserFormData((prev) => ({
+      ...prev,
+      permissions: PERMISSIONS_LIST.map((p) => p.key),
+    }));
+  };
+
+  const handleClearAllPermissions = () => {
+    setUserFormData((prev) => ({
+      ...prev,
+      permissions: [],
+    }));
+  };
+
+  const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSavingUser(true);
+    setUserFormMsg(null);
+
+    try {
+      const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
+      const method = editingUserId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: getHeaders(),
+        body: JSON.stringify(userFormData),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUserFormMsg(editingUserId ? 'ইউজার সফলভাবে আপডেট হয়েছে!' : 'নতুন ইউজার সফলভাবে তৈরি হয়েছে!');
+        fetchAllData();
+        setTimeout(() => {
+          setShowUserModal(false);
+          setUserFormMsg(null);
+        }, 700);
+      } else {
+        setUserFormMsg(data.message || 'অপারেশন ব্যর্থ হয়েছে।');
+      }
+    } catch {
+      setUserFormMsg('সার্ভার এরর হয়েছে।');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: number | string, username: string) => {
+    if (!confirm(`আপনি কি নিশ্চিত যে ইউজার "${username}"-কে সিস্টেম থেকে মুছে ফেলতে চান?`)) return;
+
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAllData();
+      } else {
+        alert(data.message || 'ইউজার ডিলিট করা সম্ভব হয়নি।');
+      }
+    } catch {
+      alert('সার্ভার এরর হয়েছে।');
+    }
   };
 
   // Donor handlers
@@ -444,6 +742,7 @@ export default function AdminPage() {
       bio: '',
       roleType: 'executive',
       orderIndex: members.length + 1,
+      monthlyFee: 0,
       joinedAt: '',
     });
     setMemberFormMsg(null);
@@ -461,6 +760,7 @@ export default function AdminPage() {
       bio: m.bio || '',
       roleType: m.roleType || 'executive',
       orderIndex: m.orderIndex || 0,
+      monthlyFee: m.monthlyFee || 0,
       joinedAt: m.joinedAt || '',
     });
     setMemberFormMsg(null);
@@ -530,6 +830,206 @@ export default function AdminPage() {
     } catch {
       alert('Server error occurred.');
     }
+  };
+
+  // ----------------------------------------------------------------------------
+  // MEMBER DUES & PAYMENTS HANDLERS
+  // ----------------------------------------------------------------------------
+  const handleGenerateMonthlyDues = async () => {
+    if (!confirm('চলতি মাসের জন্য সকল মেম্বারদের নির্ধারিত মাসিক চাঁদার ডিউ তৈরি করতে চান?')) return;
+    try {
+      setGeneratingMonthly(true);
+      const res = await fetch('/api/dues/generate-monthly', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(data.message || 'মাসিক চাঁদা সফলভাবে জেনারেট করা হয়েছে।');
+        fetchAllData();
+      } else {
+        alert(data.message || 'মাসিক চাঁদা জেনারেট করা সম্ভব হয়নি।');
+      }
+    } catch {
+      alert('সার্ভারের সাথে সংযোগ করতে সমস্যা হয়েছে।');
+    } finally {
+      setGeneratingMonthly(false);
+    }
+  };
+
+  const handleOpenAddDue = () => {
+    setAddDueForm({
+      targetType: 'single',
+      memberId: members.length > 0 ? String(members[0].id) : '',
+      title: '',
+      dueType: 'event',
+      amount: 0,
+      dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: '',
+    });
+    setAddDueMsg(null);
+    setShowAddDueModal(true);
+  };
+
+  const handleSaveDue = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!addDueForm.title || Number(addDueForm.amount) <= 0) {
+      setAddDueMsg('চাঁদার বিবরণ এবং সঠিক টাকার পরিমাণ প্রদান করুন।');
+      return;
+    }
+    setSavingDue(true);
+    setAddDueMsg(null);
+
+    try {
+      const res = await fetch('/api/dues', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(addDueForm),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAddDueMsg('ডিউ সফলভাবে তৈরি করা হয়েছে!');
+        fetchAllData();
+        setTimeout(() => {
+          setShowAddDueModal(false);
+          setAddDueMsg(null);
+        }, 700);
+      } else {
+        setAddDueMsg(data.message || 'ডিউ তৈরি করা সম্ভব হয়নি।');
+      }
+    } catch {
+      setAddDueMsg('সার্ভার এরর হয়েছে।');
+    } finally {
+      setSavingDue(false);
+    }
+  };
+
+  const handleOpenPayModal = (due: MemberDue) => {
+    setPayingDue(due);
+    const remaining = Math.max(0, (Number(due.amount) || 0) - (Number(due.paidAmount) || 0));
+    setPayForm({
+      paidAmount: remaining > 0 ? remaining : Number(due.amount) || 0,
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: 'bkash',
+      paymentNote: '',
+    });
+    setPayMsg(null);
+    setShowPayModal(true);
+  };
+
+  const handleProcessPayment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!payingDue) return;
+    const inputAmount = Number(payForm.paidAmount) || 0;
+    if (inputAmount <= 0) {
+      setPayMsg('সঠিক পেমেন্টের টাকার পরিমাণ লিখুন।');
+      return;
+    }
+
+    setProcessingPayment(true);
+    setPayMsg(null);
+
+    try {
+      const totalPaidSoFar = (Number(payingDue.paidAmount) || 0) + inputAmount;
+      const res = await fetch(`/api/dues/${payingDue.id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          paidAmount: totalPaidSoFar,
+          paymentDate: payForm.paymentDate,
+          paymentMethod: payForm.paymentMethod,
+          paymentNote: payForm.paymentNote,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPayMsg('পেমেন্ট সফলভাবে সংরক্ষিত হয়েছে!');
+        fetchAllData();
+        setTimeout(() => {
+          setShowPayModal(false);
+          setPayMsg(null);
+          setPayingDue(null);
+        }, 800);
+      } else {
+        setPayMsg(data.message || 'পেমেন্ট সম্পন্ন করা সম্ভব হয়নি।');
+      }
+    } catch {
+      setPayMsg('সার্ভার এরর হয়েছে।');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const handleOpenEditDue = (due: MemberDue) => {
+    setEditingDue(due);
+    setEditDueForm({
+      title: due.title,
+      amount: Number(due.amount) || 0,
+      paidAmount: Number(due.paidAmount) || 0,
+      status: due.status || 'pending',
+      dueDate: due.dueDate || '',
+      notes: due.notes || '',
+    });
+    setEditDueMsg(null);
+    setShowEditDueModal(true);
+  };
+
+  const handleSaveEditDue = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingDue) return;
+    setSavingEditDue(true);
+    setEditDueMsg(null);
+
+    try {
+      const res = await fetch(`/api/dues/${editingDue.id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(editDueForm),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEditDueMsg('ডিউ সফলভাবে আপডেট হয়েছে!');
+        fetchAllData();
+        setTimeout(() => {
+          setShowEditDueModal(false);
+          setEditDueMsg(null);
+          setEditingDue(null);
+        }, 700);
+      } else {
+        setEditDueMsg(data.message || 'আপডেট করা সম্ভব হয়নি।');
+      }
+    } catch {
+      setEditDueMsg('সার্ভার এরর হয়েছে।');
+    } finally {
+      setSavingEditDue(false);
+    }
+  };
+
+  const handleDeleteDue = async (id: number | string, title: string) => {
+    if (!confirm(`আপনি কি নিশ্চিত যে "${title}" ডিউটি ডিলিট করতে চান?`)) return;
+
+    try {
+      const res = await fetch(`/api/dues/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAllData();
+      } else {
+        alert(data.message || 'ডিউ ডিলিট করা সম্ভব হয়নি।');
+      }
+    } catch {
+      alert('সার্ভার এরর হয়েছে।');
+    }
+  };
+
+  const handleOpenReceipt = (due: MemberDue) => {
+    setReceiptDue(due);
+    setShowReceiptModal(true);
   };
 
   // Donation handlers
@@ -842,15 +1342,50 @@ export default function AdminPage() {
     return matchRole && matchQuery;
   });
 
-  const navMenuItems: NavGroup[] = [
+  const filteredDues = dues.filter((d) => {
+    const matchStatus = dueStatusFilter === 'all' || d.status === dueStatusFilter;
+    const matchType = dueTypeFilter === 'all' || d.dueType === dueTypeFilter;
+    const matchMember = dueMemberFilter === 'all' || String(d.memberId) === String(dueMemberFilter);
+    const q = dueSearchQuery.toLowerCase().trim();
+    const matchQuery =
+      !q ||
+      (d.memberName && d.memberName.toLowerCase().includes(q)) ||
+      (d.memberPhone && d.memberPhone.includes(q)) ||
+      (d.title && d.title.toLowerCase().includes(q)) ||
+      (d.notes && d.notes.toLowerCase().includes(q));
+    return matchStatus && matchType && matchMember && matchQuery;
+  });
+
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.toLowerCase().trim();
+    return !q || (u.name && u.name.toLowerCase().includes(q)) || u.username.toLowerCase().includes(q);
+  });
+
+  const duesStats = {
+    totalDueAmount: dues.reduce((sum, d) => sum + (Number(d.amount) || 0), 0),
+    totalPaidAmount: dues.reduce((sum, d) => sum + (Number(d.paidAmount) || 0), 0),
+    totalPendingAmount: dues.reduce((sum, d) => sum + Math.max(0, (Number(d.amount) || 0) - (Number(d.paidAmount) || 0)), 0),
+    pendingCount: dues.filter((d) => d.status === 'pending' || d.status === 'partial').length,
+    paidCount: dues.filter((d) => d.status === 'paid').length,
+  };
+
+  const rawNavMenuItems: NavGroup[] = [
     {
       group: 'MANAGEMENT',
       items: [
-        { id: 'adminDonors', label: 'Donors Directory', icon: Users, count: donors.length },
-        { id: 'adminDonations', label: 'Donation Records', icon: FileText, count: donations.length },
-        { id: 'adminMembers', label: 'Members & Committee', icon: UserCheck, count: members.length },
-        { id: 'adminCertificates', label: 'Certificate Generator', icon: Award, count: certificates.length },
-        { id: 'adminGallery', label: 'Gallery Management', icon: ImageIcon, count: gallery.length },
+        { id: 'adminDonors', label: 'Donors Directory', icon: Users, count: donors.length, perm: 'donors' },
+        { id: 'adminDonations', label: 'Donation Records', icon: FileText, count: donations.length, perm: 'donations' },
+        { id: 'adminMembers', label: 'Members & Committee', icon: UserCheck, count: members.length, perm: 'members' },
+        {
+          id: 'adminDues',
+          label: 'মেম্বার চাঁদা ও পেমেন্ট',
+          icon: CreditCard,
+          badge: duesStats.pendingCount > 0 ? duesStats.pendingCount : undefined,
+          count: duesStats.pendingCount === 0 ? dues.length : undefined,
+          perm: 'dues',
+        },
+        { id: 'adminCertificates', label: 'Certificate Generator', icon: Award, count: certificates.length, perm: 'certificates' },
+        { id: 'adminGallery', label: 'Gallery Management', icon: ImageIcon, count: gallery.length, perm: 'gallery' },
       ],
     },
     {
@@ -861,17 +1396,26 @@ export default function AdminPage() {
           label: 'Messages Inbox',
           icon: Mail,
           badge: messages.filter((m) => !m.isRead).length,
+          perm: 'messages',
         },
       ],
     },
     {
       group: 'INSIGHTS & SYSTEM',
       items: [
-        { id: 'adminAnalytics', label: 'Analytics & Reports', icon: BarChart3 },
-        { id: 'adminSettings', label: 'Settings & Security', icon: Key },
+        { id: 'adminAnalytics', label: 'Analytics & Reports', icon: BarChart3, perm: 'analytics' },
+        { id: 'adminUsers', label: 'ইউজার ও পারমিশন', icon: ShieldCheck, count: users.length, perm: 'users' },
+        { id: 'adminSettings', label: 'Settings & Security', icon: Key, perm: 'settings' },
       ],
     },
   ];
+
+  const navMenuItems: NavGroup[] = rawNavMenuItems
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => hasPermission(item.perm as AdminPermissionKey)),
+    }))
+    .filter((g) => g.items.length > 0);
 
   // ----------------------------------------------------------------------------
   // CLEAN MODERN LOGIN SCREEN
@@ -1292,32 +1836,32 @@ export default function AdminPage() {
                 width: '34px',
                 height: '34px',
                 borderRadius: '50%',
-                background: '#e2e8f0',
+                background: currentUser?.role === 'super_admin' ? '#fee2e2' : '#e2e8f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#475569',
+                color: currentUser?.role === 'super_admin' ? '#dc2626' : '#475569',
                 fontWeight: 700,
                 fontSize: '0.85rem',
               }}
             >
-              AD
+              {(currentUser?.name || currentUser?.username || 'AD').slice(0, 2).toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                Administrator
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentUser?.name || currentUser?.username || 'Administrator'}
               </div>
               <span
                 style={{
                   fontSize: '0.7rem',
-                  color: '#166534',
-                  background: '#dcfce7',
+                  color: currentUser?.role === 'super_admin' ? '#166534' : '#1e40af',
+                  background: currentUser?.role === 'super_admin' ? '#dcfce7' : '#dbeafe',
                   padding: '1px 6px',
                   borderRadius: '6px',
                   fontWeight: 700,
                 }}
               >
-                Super Admin
+                {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Sub-Admin / Moderator'}
               </span>
             </div>
           </div>
@@ -2412,6 +2956,7 @@ export default function AdminPage() {
                         <th>Photo</th>
                         <th>Member Name</th>
                         <th>Designation / Role</th>
+                        <th>Monthly Fee</th>
                         <th>Mobile Number</th>
                         <th>Blood Group</th>
                         <th>Category</th>
@@ -2458,6 +3003,12 @@ export default function AdminPage() {
                             <span className="admin-badge-role">
                               {m.designation}
                             </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontWeight: 800, color: '#0f172a' }}>৳{m.monthlyFee || 0}</span>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>/মাস</span>
+                            </div>
                           </td>
                           <td>
                             {m.mobile ? (
@@ -2532,7 +3083,7 @@ export default function AdminPage() {
                       ))}
                       {filteredMembers.length === 0 && (
                         <tr>
-                          <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                             No committee or organization members recorded yet.
                           </td>
                         </tr>
@@ -2592,6 +3143,11 @@ export default function AdminPage() {
                           <span>{m.bloodGroup}</span>
                         </div>
                       )}
+                    </div>
+
+                    <div className="admin-member-card-row" style={{ paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>মাসিক নির্ধারিত চাঁদা:</span>
+                      <span style={{ fontWeight: 800, color: '#0f172a' }}>৳{m.monthlyFee || 0} / মাস</span>
                     </div>
 
                     {m.mobile && (
@@ -2764,6 +3320,16 @@ export default function AdminPage() {
                         </select>
                       </div>
                       <div className="form-group">
+                        <label>মাসিক নির্ধারিত চাঁদা (টাকা)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="যেমন: ২০০ বা ৫০০"
+                          value={memberFormData.monthlyFee ?? 0}
+                          onChange={(e) => setMemberFormData({ ...memberFormData, monthlyFee: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="form-group">
                         <label>Blood Group</label>
                         <select
                           value={memberFormData.bloodGroup || ''}
@@ -2786,7 +3352,7 @@ export default function AdminPage() {
                           onChange={(e) => setMemberFormData({ ...memberFormData, mobile: e.target.value })}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group full">
                         <label>Display Order Index (ক্রমিক)</label>
                         <input
                           type="number"
@@ -2872,6 +3438,1067 @@ export default function AdminPage() {
                       </button>
                     </div>
                   </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: MEMBER DUES & PAYMENTS MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 'adminDues' && (
+          <div className="admin-card" style={{ padding: '24px' }}>
+            {/* Header with Title & Action Buttons */}
+            <div
+              className="admin-card-header-responsive"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '14px',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
+                  মেম্বার চাঁদা ও পেমেন্ট ব্যবস্থাপনা
+                </h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  সংগঠনের মেম্বারদের মাসিক সাবস্ক্রিপশন, ইভেন্ট চাঁদা ও পেমেন্ট হিস্ট্রি
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleGenerateMonthlyDues}
+                  disabled={generatingMonthly}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    border: '1px solid #dbeafe',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <RefreshCw size={15} className={generatingMonthly ? 'spin-icon' : ''} />
+                  <span>{generatingMonthly ? 'জেনারেট হচ্ছে...' : 'চলতি মাসের চাঁদা তৈরি করুন'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddDue}
+                  style={{
+                    padding: '10px 18px',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>নতুন চাঁদা / ইভেন্ট ডিউ</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Top 4 Financial Overview Cards */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px',
+                marginBottom: '24px',
+              }}
+            >
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>মোট ধার্যকৃত চাঁদা</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
+                    ৳{duesStats.totalDueAmount.toLocaleString()}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>সর্বমোট {dues.length} টি ডিউ</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+                  <Wallet size={20} />
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সংগৃহীত মোট চাঁদা</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#15803d', marginTop: '3px' }}>
+                    ৳{duesStats.totalPaidAmount.toLocaleString()}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>{duesStats.paidCount} টি সম্পূর্ণ পরিশোধিত</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
+                  <CheckCircle2 size={20} />
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>মোট বকেয়া টাকা</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#dc2626', marginTop: '3px' }}>
+                    ৳{duesStats.totalPendingAmount.toLocaleString()}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600 }}>{duesStats.pendingCount} টি ডিউ বকেয়া/আংশিক</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                  <Clock size={20} />
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>আদায় সম্পন্ন হার</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2563eb', marginTop: '3px' }}>
+                    {duesStats.totalDueAmount > 0 ? Math.round((duesStats.totalPaidAmount / duesStats.totalDueAmount) * 100) : 0}%
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 600 }}>মোট চাঁদার অনুপাত</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                  <BarChart3 size={20} />
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="মেম্বারের নাম, মোবাইল বা চাঁদার শিরোনাম দিয়ে খুঁজুন..."
+                  value={dueSearchQuery}
+                  onChange={(e) => setDueSearchQuery(e.target.value)}
+                  className="admin-search-input"
+                  style={{ paddingRight: dueSearchQuery ? '38px' : '16px' }}
+                />
+                {dueSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setDueSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94a3b8',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Chips */}
+              <div className="admin-filter-scroll">
+                <button
+                  type="button"
+                  onClick={() => setDueStatusFilter('all')}
+                  className={`admin-filter-chip ${dueStatusFilter === 'all' ? 'active' : ''}`}
+                >
+                  সকল ({dues.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDueStatusFilter('pending')}
+                  className={`admin-filter-chip ${dueStatusFilter === 'pending' ? 'active' : ''}`}
+                >
+                  বকেয়া ({dues.filter((d) => d.status === 'pending').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDueStatusFilter('partial')}
+                  className={`admin-filter-chip ${dueStatusFilter === 'partial' ? 'active' : ''}`}
+                >
+                  আংশিক পরিশোধ ({dues.filter((d) => d.status === 'partial').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDueStatusFilter('paid')}
+                  className={`admin-filter-chip ${dueStatusFilter === 'paid' ? 'active' : ''}`}
+                >
+                  পরিশোধিত ({dues.filter((d) => d.status === 'paid').length})
+                </button>
+              </div>
+
+              {/* Type Filter */}
+              <div className="admin-filter-scroll">
+                <button
+                  type="button"
+                  onClick={() => setDueTypeFilter('all')}
+                  className={`admin-filter-chip ${dueTypeFilter === 'all' ? 'active' : ''}`}
+                >
+                  সকল ধরন
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDueTypeFilter('monthly')}
+                  className={`admin-filter-chip ${dueTypeFilter === 'monthly' ? 'active' : ''}`}
+                >
+                  মাসিক চাঁদা
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDueTypeFilter('event')}
+                  className={`admin-filter-chip ${dueTypeFilter === 'event' ? 'active' : ''}`}
+                >
+                  ইভেন্ট / অন্যান্য
+                </button>
+              </div>
+
+              {/* Member Selector Filter */}
+              <select
+                value={dueMemberFilter}
+                onChange={(e) => setDueMemberFilter(e.target.value)}
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              >
+                <option value="all">সকল মেম্বার</option>
+                {members.map((m) => (
+                  <option key={m.id} value={String(m.id)}>
+                    {m.name} ({m.designation})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="admin-desktop-view">
+              <div className="admin-table-container">
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>মেম্বার</th>
+                        <th>চাঁদার বিবরণ ও ধরন</th>
+                        <th>ধার্যকৃত টাকা</th>
+                        <th>পরিশোধিত</th>
+                        <th>বকেয়া</th>
+                        <th>স্ট্যাটাস</th>
+                        <th>পেমেন্ট তথ্য</th>
+                        <th style={{ textAlign: 'right' }}>অ্যাকশন</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDues.map((d) => {
+                        const remaining = Math.max(0, (Number(d.amount) || 0) - (Number(d.paidAmount) || 0));
+                        return (
+                          <tr key={d.id}>
+                            <td>
+                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{d.memberName || 'মেম্বার'}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                {d.memberDesignation} {d.memberPhone ? `• ${d.memberPhone}` : ''}
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: '#1e293b' }}>{d.title}</div>
+                              <div style={{ marginTop: '3px', display: 'flex', gap: '6px' }}>
+                                <span className={d.dueType === 'monthly' ? 'admin-badge-monthly' : 'admin-badge-event'}>
+                                  {d.dueType === 'monthly' ? 'মাসিক চাঁদা' : 'ইভেন্ট / কাস্টম'}
+                                </span>
+                                {d.dueDate && (
+                                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                    শেষ তারিখ: {d.dueDate}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 800, color: '#0f172a' }}>৳{d.amount}</span>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 700, color: '#15803d' }}>৳{d.paidAmount}</span>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 700, color: remaining > 0 ? '#dc2626' : '#15803d' }}>
+                                ৳{remaining}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className={
+                                  d.status === 'paid'
+                                    ? 'admin-badge-paid'
+                                    : d.status === 'partial'
+                                    ? 'admin-badge-partial'
+                                    : 'admin-badge-pending'
+                                }
+                              >
+                                {d.status === 'paid' && <Check size={11} />}
+                                {d.status === 'partial' && <CircleDollarSign size={11} />}
+                                {d.status === 'pending' && <Clock size={11} />}
+                                <span>
+                                  {d.status === 'paid'
+                                    ? 'পরিশোধিত'
+                                    : d.status === 'partial'
+                                    ? 'আংশিক পরিশোধ'
+                                    : 'বকেয়া'}
+                                </span>
+                              </span>
+                            </td>
+                            <td>
+                              {d.paymentDate ? (
+                                <div style={{ fontSize: '0.78rem' }}>
+                                  <div style={{ fontWeight: 600, color: '#0f172a' }}>{d.paymentDate}</div>
+                                  <div style={{ color: '#64748b', textTransform: 'capitalize' }}>
+                                    {d.paymentMethod || 'Cash'} {d.paymentNote ? `(${d.paymentNote})` : ''}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>পরিশোধ হয়নি</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              {d.status !== 'paid' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenPayModal(d)}
+                                  className="admin-btn-action admin-btn-pay"
+                                  style={{ marginRight: '6px' }}
+                                  title="পেমেন্ট গ্রহণ করুন"
+                                >
+                                  <DollarSign size={13} />
+                                  <span>পেমেন্ট নিন</span>
+                                </button>
+                              )}
+                              {d.paidAmount > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenReceipt(d)}
+                                  className="admin-btn-action admin-btn-receipt"
+                                  style={{ marginRight: '6px' }}
+                                  title="রশিদ দেখুন / প্রিন্ট"
+                                >
+                                  <Receipt size={13} />
+                                  <span>রশিদ</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditDue(d)}
+                                className="admin-btn-action admin-btn-edit"
+                                style={{ marginRight: '6px' }}
+                                title="এডিট করুন"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDue(d.id, d.title)}
+                                className="admin-btn-action admin-btn-delete"
+                                title="ডিলিট করুন"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredDues.length === 0 && (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                            কোনো চাঁদা বা ডিউ রেকর্ড পাওয়া যায়নি।
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="admin-mobile-cards-view">
+              {filteredDues.map((d) => {
+                const remaining = Math.max(0, (Number(d.amount) || 0) - (Number(d.paidAmount) || 0));
+                return (
+                  <div key={d.id} className="admin-member-card">
+                    <div className="admin-member-card-header">
+                      <div className="admin-member-card-title" style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div className="admin-member-card-name">{d.memberName || 'মেম্বার'}</div>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{d.memberDesignation}</span>
+                          </div>
+                          <span
+                            className={
+                              d.status === 'paid'
+                                ? 'admin-badge-paid'
+                                : d.status === 'partial'
+                                ? 'admin-badge-partial'
+                                : 'admin-badge-pending'
+                            }
+                          >
+                            {d.status === 'paid' ? 'পরিশোধিত' : d.status === 'partial' ? 'আংশিক' : 'বকেয়া'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="admin-member-card-details">
+                      <div className="admin-member-card-row">
+                        <span style={{ fontWeight: 600, color: '#0f172a' }}>{d.title}</span>
+                        <span className={d.dueType === 'monthly' ? 'admin-badge-monthly' : 'admin-badge-event'}>
+                          {d.dueType === 'monthly' ? 'মাসিক চাঁদা' : 'ইভেন্ট'}
+                        </span>
+                      </div>
+
+                      <div className="admin-member-card-row" style={{ paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
+                        <div>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>ধার্যকৃত:</span>
+                          <span style={{ fontWeight: 800, color: '#0f172a' }}>৳{d.amount}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>পরিশোধিত:</span>
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>৳{d.paidAmount}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>বকেয়া:</span>
+                          <span style={{ fontWeight: 800, color: remaining > 0 ? '#dc2626' : '#15803d' }}>৳{remaining}</span>
+                        </div>
+                      </div>
+
+                      {d.paymentDate && (
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
+                          পেমেন্ট: {d.paymentDate} • {d.paymentMethod || 'Cash'} {d.paymentNote ? `(${d.paymentNote})` : ''}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="admin-member-card-actions">
+                      {d.status !== 'paid' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPayModal(d)}
+                          className="admin-btn-action admin-btn-pay"
+                          style={{ flex: 1 }}
+                        >
+                          <DollarSign size={14} />
+                          <span>পেমেন্ট নিন</span>
+                        </button>
+                      )}
+                      {d.paidAmount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenReceipt(d)}
+                          className="admin-btn-action admin-btn-receipt"
+                        >
+                          <Receipt size={14} />
+                          <span>রশিদ</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditDue(d)}
+                        className="admin-btn-action admin-btn-edit"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDue(d.id, d.title)}
+                        className="admin-btn-action admin-btn-delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredDues.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>
+                    কোনো চাঁদা বা ডিউ পাওয়া যায়নি
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal 1: Add New Due Modal */}
+            {showAddDueModal && (
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
+                      নতুন চাঁদা / ইভেন্ট ডিউ তৈরি করুন
+                    </h3>
+                    <button
+                      onClick={() => setShowAddDueModal(false)}
+                      type="button"
+                      style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {addDueMsg && (
+                    <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '18px', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                      {addDueMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveDue}>
+                    <div className="form-grid">
+                      <div className="form-group full">
+                        <label>কার জন্য ডিউ তৈরি হবে? *</label>
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                            <input
+                              type="radio"
+                              name="targetType"
+                              checked={addDueForm.targetType === 'single'}
+                              onChange={() => setAddDueForm({ ...addDueForm, targetType: 'single', memberId: members.length > 0 ? String(members[0].id) : '' })}
+                            />
+                            নির্দিষ্ট একজন মেম্বার
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                            <input
+                              type="radio"
+                              name="targetType"
+                              checked={addDueForm.targetType === 'all'}
+                              onChange={() => setAddDueForm({ ...addDueForm, targetType: 'all', memberId: 'all' })}
+                            />
+                            সকল মেম্বারদের জন্য একসাথে ({members.length} জন)
+                          </label>
+                        </div>
+                      </div>
+
+                      {addDueForm.targetType === 'single' && (
+                        <div className="form-group full">
+                          <label>মেম্বার নির্বাচন করুন *</label>
+                          <select
+                            required
+                            value={addDueForm.memberId}
+                            onChange={(e) => setAddDueForm({ ...addDueForm, memberId: e.target.value })}
+                          >
+                            <option value="">-- মেম্বার নির্বাচন করুন --</option>
+                            {members.map((m) => (
+                              <option key={m.id} value={String(m.id)}>
+                                {m.name} ({m.designation}) - বর্তমান ফি: ৳{m.monthlyFee || 0}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="form-group full">
+                        <label>চাঁদার শিরোনাম / বিবরণ *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="যেমন: ইফতার মাহফিল চাঁদা ২০২৬ / বিশেষ অনুদান"
+                          value={addDueForm.title}
+                          onChange={(e) => setAddDueForm({ ...addDueForm, title: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>চাঁদার ধরন *</label>
+                        <select
+                          value={addDueForm.dueType}
+                          onChange={(e) => setAddDueForm({ ...addDueForm, dueType: e.target.value })}
+                        >
+                          <option value="event">ইভেন্ট চাঁদা (Event Fee)</option>
+                          <option value="monthly">মাসিক চাঁদা (Monthly Subscription)</option>
+                          <option value="custom">অন্যান্য কাস্টম ডিউ (Custom)</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>টাকার পরিমাণ (৳) *</label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="যেমন: ৫০০"
+                          value={addDueForm.amount || ''}
+                          onChange={(e) => setAddDueForm({ ...addDueForm, amount: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>পরিশোধের শেষ তারিখ</label>
+                        <input
+                          type="date"
+                          value={addDueForm.dueDate || ''}
+                          onChange={(e) => setAddDueForm({ ...addDueForm, dueDate: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group full">
+                        <label>নোট / মন্তব্য (ঐচ্ছিক)</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: চাঁভালি ঈদ পুনর্মিলনী উপলক্ষ্যে"
+                          value={addDueForm.notes || ''}
+                          onChange={(e) => setAddDueForm({ ...addDueForm, notes: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
+                      <button
+                        type="submit"
+                        disabled={savingDue}
+                        style={{
+                          flex: 1,
+                          minWidth: '130px',
+                          padding: '12px',
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {savingDue ? 'তৈরি হচ্ছে...' : 'ডিউ সংরক্ষণ করুন'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddDueModal(false)}
+                        style={{
+                          padding: '12px 18px',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        বাতিল
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Modal 2: Pay Due Modal */}
+            {showPayModal && payingDue && (
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
+                        পেমেন্ট গ্রহণ ও পরিশোধ
+                      </h3>
+                      <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        {payingDue.memberName} • {payingDue.title}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowPayModal(false)}
+                      type="button"
+                      style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      background: '#f8fafc',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      marginBottom: '18px',
+                      border: '1px solid #e2e8f0',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 1fr',
+                      gap: '10px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>মোট চাঁদা</span>
+                      <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>৳{payingDue.amount}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>পূর্ব পরিশোধিত</span>
+                      <strong style={{ fontSize: '1.1rem', color: '#15803d' }}>৳{payingDue.paidAmount}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>অবশিষ্ট বকেয়া</span>
+                      <strong style={{ fontSize: '1.1rem', color: '#dc2626' }}>
+                        ৳{Math.max(0, payingDue.amount - payingDue.paidAmount)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {payMsg && (
+                    <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '18px', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                      {payMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleProcessPayment}>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>জমার পরিমাণ (টাকা) *</label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="টাকার পরিমাণ লিখুন"
+                          value={payForm.paidAmount || ''}
+                          onChange={(e) => setPayForm({ ...payForm, paidAmount: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>পেমেন্টের তারিখ *</label>
+                        <input
+                          type="date"
+                          required
+                          value={payForm.paymentDate}
+                          onChange={(e) => setPayForm({ ...payForm, paymentDate: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>পেমেন্ট মাধ্যম *</label>
+                        <select
+                          value={payForm.paymentMethod}
+                          onChange={(e) => setPayForm({ ...payForm, paymentMethod: e.target.value })}
+                        >
+                          <option value="cash">নগদ গ্রহণ (Cash)</option>
+                          <option value="bkash">বিকাশ (bKash)</option>
+                          <option value="nagad">নগদ (Nagad App)</option>
+                          <option value="rocket">রকেট (Rocket)</option>
+                          <option value="bank">ব্যাংক একাউন্ট (Bank Transfer)</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>ট্রানজেকশন আইডি / রেফারেন্স নোট</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: TrxID: 9X7B6... বা ক্যাশ গ্রহণকারী"
+                          value={payForm.paymentNote || ''}
+                          onChange={(e) => setPayForm({ ...payForm, paymentNote: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
+                      <button
+                        type="submit"
+                        disabled={processingPayment}
+                        style={{
+                          flex: 1,
+                          minWidth: '130px',
+                          padding: '12px',
+                          background: '#15803d',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {processingPayment ? 'পেমেন্ট হচ্ছে...' : 'পেমেন্ট নিশ্চিত করুন'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowPayModal(false)}
+                        style={{
+                          padding: '12px 18px',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        বাতিল
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Modal 3: Edit Due Modal */}
+            {showEditDueModal && editingDue && (
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
+                      ডিউ তথ্য এডিট করুন
+                    </h3>
+                    <button
+                      onClick={() => setShowEditDueModal(false)}
+                      type="button"
+                      style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {editDueMsg && (
+                    <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '18px', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                      {editDueMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveEditDue}>
+                    <div className="form-grid">
+                      <div className="form-group full">
+                        <label>চাঁদার শিরোনাম *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editDueForm.title}
+                          onChange={(e) => setEditDueForm({ ...editDueForm, title: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>মোট ধার্যকৃত টাকা *</label>
+                        <input
+                          type="number"
+                          required
+                          min="0"
+                          value={editDueForm.amount}
+                          onChange={(e) => setEditDueForm({ ...editDueForm, amount: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>পরিশোধিত টাকা</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editDueForm.paidAmount}
+                          onChange={(e) => setEditDueForm({ ...editDueForm, paidAmount: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>স্ট্যাটাস</label>
+                        <select
+                          value={editDueForm.status}
+                          onChange={(e) => setEditDueForm({ ...editDueForm, status: e.target.value })}
+                        >
+                          <option value="pending">বকেয়া (Pending)</option>
+                          <option value="partial">আংশিক পরিশোধ (Partial)</option>
+                          <option value="paid">পরিশোধিত (Paid)</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>পরিশোধের শেষ তারিখ</label>
+                        <input
+                          type="date"
+                          value={editDueForm.dueDate}
+                          onChange={(e) => setEditDueForm({ ...editDueForm, dueDate: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group full">
+                        <label>মন্তব্য / নোট</label>
+                        <input
+                          type="text"
+                          value={editDueForm.notes}
+                          onChange={(e) => setEditDueForm({ ...editDueForm, notes: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
+                      <button
+                        type="submit"
+                        disabled={savingEditDue}
+                        style={{
+                          flex: 1,
+                          minWidth: '130px',
+                          padding: '12px',
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {savingEditDue ? 'সংরক্ষণ হচ্ছে...' : 'আপডেট সম্পন্ন করুন'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditDueModal(false)}
+                        style={{
+                          padding: '12px 18px',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        বাতিল
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Modal 4: Digital Receipt / Voucher Modal */}
+            {showReceiptModal && receiptDue && (
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card" style={{ maxWidth: '520px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: 800 }}>
+                      পেমেন্ট মানি রিসিট
+                    </h3>
+                    <button
+                      onClick={() => setShowReceiptModal(false)}
+                      type="button"
+                      style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Printable Receipt Card */}
+                  <div className="due-receipt-card">
+                    <div style={{ textAlign: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '18px' }}>
+                      <div style={{ width: '48px', height: '48px', margin: '0 auto 8px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                        <Droplet size={26} fill="#dc2626" />
+                      </div>
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                        চাঁভালি রক্ত ফাউন্ডেশন
+                      </h3>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                        মেম্বার চাঁদা ও অনুদান জমা রশিদ
+                      </p>
+                      <div style={{ marginTop: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>
+                        রশিদ নং: #CBF-REC-{receiptDue.id} | তারিখ: {receiptDue.paymentDate || new Date().toISOString().split('T')[0]}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
+                        <span style={{ color: '#64748b' }}>মেম্বারের নাম:</span>
+                        <strong style={{ color: '#0f172a' }}>{receiptDue.memberName}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
+                        <span style={{ color: '#64748b' }}>পদবী:</span>
+                        <span style={{ color: '#0f172a' }}>{receiptDue.memberDesignation || 'সদস্য'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
+                        <span style={{ color: '#64748b' }}>চাঁদার বিবরণ:</span>
+                        <span style={{ color: '#0f172a', fontWeight: 600 }}>{receiptDue.title}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
+                        <span style={{ color: '#64748b' }}>পেমেন্ট মাধ্যম:</span>
+                        <span style={{ color: '#0f172a', textTransform: 'capitalize' }}>
+                          {receiptDue.paymentMethod || 'নগদ গ্রহণ'} {receiptDue.paymentNote ? `(${receiptDue.paymentNote})` : ''}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
+                        <span style={{ color: '#64748b' }}>মোট নির্ধারিত চাঁদা:</span>
+                        <span style={{ color: '#0f172a' }}>৳{receiptDue.amount}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
+                        <span style={{ color: '#065f46', fontWeight: 700 }}>পরিশোধিত টাকা:</span>
+                        <strong style={{ color: '#15803d', fontSize: '1.15rem' }}>৳{receiptDue.paidAmount}</strong>
+                      </div>
+                      {Math.max(0, receiptDue.amount - receiptDue.paidAmount) > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: '#fef2f2', borderRadius: '8px' }}>
+                          <span style={{ color: '#991b1b', fontWeight: 600 }}>অবশিষ্ট বকেয়া:</span>
+                          <strong style={{ color: '#dc2626' }}>৳{Math.max(0, receiptDue.amount - receiptDue.paidAmount)}</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ textAlign: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '14px', fontSize: '0.78rem', color: '#64748b' }}>
+                      <p style={{ margin: 0 }}>স্বেচ্ছাসেবী রক্তদানে আপনার নিয়মিত অবদান প্রশংসনীয়। ধন্যবাদ!</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      style={{
+                        flex: 1,
+                        padding: '11px',
+                        background: '#0f172a',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <Printer size={16} />
+                      <span>রশিদ প্রিন্ট / PDF সংরক্ষণ</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowReceiptModal(false)}
+                      style={{
+                        padding: '11px 18px',
+                        background: '#f1f5f9',
+                        color: '#475569',
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      বন্ধ করুন
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -3457,6 +5084,575 @@ export default function AdminPage() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: USERS & PERMISSIONS MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 'adminUsers' && (
+          <div className="admin-card" style={{ padding: '24px' }}>
+            {/* Header */}
+            <div
+              className="admin-card-header-responsive"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '14px',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
+                  ইউজার ও পারমিশন ব্যবস্থাপনা
+                </h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  নতুন ইউজার তৈরি করুন এবং টিকমার্কের মাধ্যমে নির্দিষ্ট মডিউলের পারমিশন নির্ধারণ করুন
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleOpenAddUser}
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                }}
+              >
+                <UserPlus size={16} />
+                <span>নতুন ইউজার তৈরি করুন</span>
+              </button>
+            </div>
+
+            {/* Top 4 Stat Cards */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '16px',
+                marginBottom: '24px',
+              }}
+            >
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>মোট সিস্টেম ইউজার</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
+                    {users.length} জন
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>রেজিস্টার্ড একাউন্ট</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+                  <Users size={20} />
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সুপার এডমিন</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1d4ed8', marginTop: '3px' }}>
+                    {users.filter((u) => u.role === 'super_admin').length} জন
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 600 }}>পূর্ণ এক্সেসপ্রাপ্ত</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1d4ed8' }}>
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সাব-এডমিন / মডারেটর</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
+                    {users.filter((u) => u.role !== 'super_admin').length} জন
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>কাস্টম পারমিশনপ্রাপ্ত</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+                  <UserCog size={20} />
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সক্রিয় একাউন্ট</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#15803d', marginTop: '3px' }}>
+                    {users.filter((u) => u.isActive !== false).length} জন
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>লগইন সক্রিয়</span>
+                </div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
+                  <CheckCircle2 size={20} />
+                </div>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="ইউজারের নাম অথবা ইউজারনেম দিয়ে খুঁজুন..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="admin-search-input"
+                  style={{ paddingRight: userSearch ? '38px' : '16px' }}
+                />
+                {userSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setUserSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94a3b8',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop Users Table */}
+            <div className="admin-desktop-view">
+              <div className="admin-table-container">
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>ইউজার তথ্য</th>
+                        <th>রোল / ভূমিকা</th>
+                        <th>অনুমোদিত পারমিশনসমূহ</th>
+                        <th>স্ট্যাটাস</th>
+                        <th style={{ textAlign: 'right' }}>অ্যাকশন</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map((u) => {
+                        const isSuper = u.role === 'super_admin' || u.permissions?.includes('all');
+                        return (
+                          <tr key={u.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div
+                                  style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '50%',
+                                    background: isSuper ? '#fee2e2' : '#eff6ff',
+                                    color: isSuper ? '#dc2626' : '#1d4ed8',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                  }}
+                                >
+                                  {(u.name || u.username).slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{u.name || u.username}</div>
+                                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>@{u.username}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={isSuper ? 'user-role-super' : 'user-role-sub'}>
+                                {isSuper ? <Shield size={12} /> : <UserCheck size={12} />}
+                                <span>{isSuper ? 'সুপার এডমিন' : 'সাব-এডমিন'}</span>
+                              </span>
+                            </td>
+                            <td>
+                              {isSuper ? (
+                                <span className="perm-tag-chip" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#a7f3d0' }}>
+                                  <Check size={11} />
+                                  <span>সকল মডিউলে পূর্ণ এক্সেস</span>
+                                </span>
+                              ) : (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '400px' }}>
+                                  {(u.permissions || []).map((permKey) => {
+                                    const def = PERMISSIONS_LIST.find((p) => p.key === permKey);
+                                    return (
+                                      <span key={permKey} className="perm-tag-chip">
+                                        {def?.label || permKey}
+                                      </span>
+                                    );
+                                  })}
+                                  {(!u.permissions || u.permissions.length === 0) && (
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>কোনো পারমিশন দেওয়া হয়নি</span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <span className={u.isActive !== false ? 'user-status-active' : 'user-status-inactive'}>
+                                {u.isActive !== false ? <Check size={11} /> : <X size={11} />}
+                                <span>{u.isActive !== false ? 'সক্রিয় (Active)' : 'নিষ্ক্রিয় (Inactive)'}</span>
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditUser(u)}
+                                className="admin-btn-action admin-btn-edit"
+                                style={{ marginRight: '6px' }}
+                                title="এডিট ও পারমিশন পরিবর্তন"
+                              >
+                                <Edit2 size={13} />
+                                <span>এডিট</span>
+                              </button>
+                              {String(u.id) !== String(currentUser?.id) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(u.id, u.username)}
+                                  className="admin-btn-action admin-btn-delete"
+                                  title="মুছে ফেলুন"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>ডিলিট</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredUsers.length === 0 && (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                            কোনো ইউজার পাওয়া যায়নি।
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Users Cards View */}
+            <div className="admin-mobile-cards-view">
+              {filteredUsers.map((u) => {
+                const isSuper = u.role === 'super_admin' || u.permissions?.includes('all');
+                return (
+                  <div key={u.id} className="admin-member-card">
+                    <div className="admin-member-card-header">
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: isSuper ? '#fee2e2' : '#eff6ff',
+                          color: isSuper ? '#dc2626' : '#1d4ed8',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(u.name || u.username).slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="admin-member-card-title" style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div className="admin-member-card-name">{u.name || u.username}</div>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>@{u.username}</span>
+                          </div>
+                          <span className={u.isActive !== false ? 'user-status-active' : 'user-status-inactive'}>
+                            {u.isActive !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="admin-member-card-details">
+                      <div className="admin-member-card-row">
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>রোল / ভূমিকা:</span>
+                        <span className={isSuper ? 'user-role-super' : 'user-role-sub'}>
+                          {isSuper ? 'সুপার এডমিন' : 'সাব-এডমিন'}
+                        </span>
+                      </div>
+
+                      <div style={{ paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                          পারমিশনসমূহ:
+                        </span>
+                        {isSuper ? (
+                          <span className="perm-tag-chip" style={{ background: '#dcfce7', color: '#15803d' }}>
+                            সকল মডিউলে পূর্ণ এক্সেস
+                          </span>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {(u.permissions || []).map((permKey) => {
+                              const def = PERMISSIONS_LIST.find((p) => p.key === permKey);
+                              return (
+                                <span key={permKey} className="perm-tag-chip">
+                                  {def?.label || permKey}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="admin-member-card-actions">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditUser(u)}
+                        className="admin-btn-action admin-btn-edit"
+                        style={{ flex: 1 }}
+                      >
+                        <Edit2 size={14} />
+                        <span>এডিট ও পারমিশন</span>
+                      </button>
+                      {String(u.id) !== String(currentUser?.id) && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUser(u.id, u.username)}
+                          className="admin-btn-action admin-btn-delete"
+                        >
+                          <Trash2 size={14} />
+                          <span>ডিলিট</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal: Add/Edit User Modal with Checkboxes */}
+            {showUserModal && (
+              <div className="admin-modal-overlay">
+                <div className="admin-card admin-modal-card" style={{ maxWidth: '640px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
+                      {editingUserId ? 'ইউজার তথ্য ও পারমিশন পরিবর্তন' : 'নতুন ইউজার তৈরি ও পারমিশন নির্ধারণ'}
+                    </h3>
+                    <button
+                      onClick={() => setShowUserModal(false)}
+                      type="button"
+                      style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {userFormMsg && (
+                    <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '18px', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                      {userFormMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveUser}>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>ইউজারের নাম (Full Name) *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="যেমন: আহমদ করিম"
+                          value={userFormData.name || ''}
+                          onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>লগইন ইউজারনেম *</label>
+                        <input
+                          type="text"
+                          required
+                          disabled={Boolean(editingUserId)}
+                          placeholder="যেমন: karim_admin"
+                          value={userFormData.username}
+                          onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
+                          style={{ background: editingUserId ? '#f1f5f9' : '#ffffff' }}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>{editingUserId ? 'নতুন পাসওয়ার্ড (ঐচ্ছিক)' : 'লগইন পাসওয়ার্ড *'}</label>
+                        <input
+                          type="password"
+                          required={!editingUserId}
+                          placeholder={editingUserId ? 'পরিবর্তন না করতে চাইলে খালি রাখুন' : 'কমপক্ষে ৪ অক্ষরের পাসওয়ার্ড'}
+                          value={userFormData.password || ''}
+                          onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>ইউজারের ভূমিকা (Role) *</label>
+                        <select
+                          value={userFormData.role}
+                          onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value as any })}
+                        >
+                          <option value="sub_admin">সাব-এডমিন / মডারেটর (কাস্টম পারমিশন)</option>
+                          <option value="super_admin">সুপার এডমিন (পূর্ণ এক্সেস)</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group full">
+                        <label>একাউন্ট স্ট্যাটাস</label>
+                        <select
+                          value={userFormData.isActive !== false ? 'active' : 'inactive'}
+                          onChange={(e) => setUserFormData({ ...userFormData, isActive: e.target.value === 'active' })}
+                        >
+                          <option value="active">সক্রিয় (Active - লগইন করতে পারবে)</option>
+                          <option value="inactive">নিষ্ক্রিয় (Inactive - সাময়িক ব্লক)</option>
+                        </select>
+                      </div>
+
+                      {/* Permission Checkboxes Section */}
+                      <div className="form-group full" style={{ marginTop: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                          <label style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>
+                            মডিউলভিত্তিক এক্সেস পারমিশনসমূহ (টিক দিন) *
+                          </label>
+
+                          {userFormData.role !== 'super_admin' && (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={handleSelectAllPermissions}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  background: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                সব সিলেক্ট করুন
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleClearAllPermissions}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  background: '#f8fafc',
+                                  color: '#64748b',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ক্লিয়ার করুন
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {userFormData.role === 'super_admin' ? (
+                          <div style={{ padding: '14px', background: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '0.88rem', fontWeight: 600 }}>
+                            <ShieldCheck size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
+                            সুপার এডমিন রোল নির্বাচিত থাকায় এই ইউজার স্বয়ংক্রিয়ভাবে সবকটি মডিউলে পূর্ণ এক্সেস পাবেন।
+                          </div>
+                        ) : (
+                          <div className="perm-checkbox-grid">
+                            {PERMISSIONS_LIST.map((perm) => {
+                              const isChecked = (userFormData.permissions || []).includes(perm.key);
+                              return (
+                                <label
+                                  key={perm.key}
+                                  className={`perm-checkbox-card ${isChecked ? 'checked' : ''}`}
+                                  onClick={(e) => {
+                                    // Prevent double toggle from label + checkbox native event
+                                    if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                                      handleTogglePermission(perm.key);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleTogglePermission(perm.key)}
+                                  />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isChecked ? '#991b1b' : '#1e293b' }}>
+                                      {perm.label}
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                                      {perm.description}
+                                    </div>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
+                      <button
+                        type="submit"
+                        disabled={savingUser}
+                        style={{
+                          flex: 1,
+                          minWidth: '130px',
+                          padding: '12px',
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {savingUser ? 'সংরক্ষণ হচ্ছে...' : editingUserId ? 'আপডেট সম্পন্ন করুন' : 'ইউজার সংরক্ষণ করুন'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowUserModal(false)}
+                        style={{
+                          padding: '12px 18px',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        বাতিল
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
