@@ -1657,28 +1657,6 @@ export default function AdminPage() {
           </div>
           <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>Chavali Admin</span>
         </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          style={{
-            background: '#fee2e2',
-            border: 'none',
-            color: '#991b1b',
-            borderRadius: '8px',
-            padding: '6px 10px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-          }}
-          title="Sign Out"
-        >
-          <LogOut size={14} />
-          <span>Exit</span>
-        </button>
       </div>
 
       {/* Backdrop overlay for mobile drawer */}
