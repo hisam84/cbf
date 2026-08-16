@@ -223,16 +223,16 @@ export interface PermissionDefinition {
 }
 
 export const PERMISSIONS_LIST: readonly PermissionDefinition[] = [
-  { key: 'donors', label: 'রক্তদাতা ডিরেক্টরি', category: 'ম্যানেজমেন্ট', description: 'রক্তদাতা যোগ, এডিট, ভিউ ও ডিলিট করার এক্সেস' },
-  { key: 'donations', label: 'রক্তদান রেকর্ড', category: 'ম্যানেজমেন্ট', description: 'রক্তদানের হিস্ট্রি ও নতুন রক্তদান এন্ট্রি' },
-  { key: 'members', label: 'মেম্বার ও কমিটি', category: 'ম্যানেজমেন্ট', description: 'কমিটি ও সাধারণ মেম্বারদের তালিকা ও প্রোফাইল' },
-  { key: 'dues', label: 'মেম্বার চাঁদা ও পেমেন্ট', category: 'ম্যানেজমেন্ট', description: 'মাসিক চাঁদা, ইভেন্ট ফি তৈরি ও পেমেন্ট কালেকশন' },
-  { key: 'certificates', label: 'সার্টিফিকেট জেনারেটর', category: 'সার্ভিস', description: 'রক্তদাতাদের সার্টিফিকেট তৈরি ও প্রিন্ট/ডাউনলোড' },
-  { key: 'gallery', label: 'ফটো গ্যালারি', category: 'কন্টেন্ট', description: 'অ্যাক্টিভিটি ছবি আপলোড ও ম্যানেজমেন্ট' },
-  { key: 'messages', label: 'মেসেজ ইনবক্স', category: 'কমিউনিকেশন', description: 'ওয়েবসাইটের কন্টাক্ট মেসেজ দেখা ও হ্যান্ডেল করা' },
-  { key: 'analytics', label: 'অ্যানালিটিক্স ও রিপোর্টস', category: 'সিস্টেম', description: 'রক্তদান ও ড্যাশবোর্ডের সার্বিক পরিসংখ্যান' },
-  { key: 'settings', label: 'সেটিংস ও নিরাপত্তা', category: 'সিস্টেম', description: 'পাসওয়ার্ড পরিবর্তন ও সিস্টেম ডাটাবেজ হেলথ' },
-  { key: 'users', label: 'ইউজার ও পারমিশন কন্ট্রোল', category: 'সিস্টেম', description: 'নতুন ইউজার তৈরি ও পারমিশন নিয়ন্ত্রণ' },
+  { key: 'donors', label: 'Donors Directory', category: 'Management', description: 'Access to add, edit, view, and delete donor records' },
+  { key: 'donations', label: 'Donation Records', category: 'Management', description: 'Log and manage blood donation histories and entries' },
+  { key: 'members', label: 'Members & Committee', category: 'Management', description: 'Manage organization committee and member profiles' },
+  { key: 'dues', label: 'Member Fees & Dues', category: 'Management', description: 'Manage monthly fees, custom event dues & payment collection' },
+  { key: 'certificates', label: 'Certificate Generator', category: 'Services', description: 'Generate, preview, and download donation certificates' },
+  { key: 'gallery', label: 'Photo Gallery', category: 'Content', description: 'Upload, manage, and delete foundation activity photos' },
+  { key: 'messages', label: 'Messages Inbox', category: 'Communication', description: 'View, read, and manage contact form inquiries' },
+  { key: 'analytics', label: 'Analytics & Reports', category: 'System', description: 'View blood group distribution and donation statistics' },
+  { key: 'settings', label: 'Settings & Security', category: 'System', description: 'Change admin password and monitor database status' },
+  { key: 'users', label: 'User & Permissions', category: 'System', description: 'Create sub-admin users and manage granular permissions' },
 ] as const;
 
 export interface AdminUser {

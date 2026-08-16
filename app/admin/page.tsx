@@ -612,24 +612,24 @@ export default function AdminPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setUserFormMsg(editingUserId ? 'ইউজার সফলভাবে আপডেট হয়েছে!' : 'নতুন ইউজার সফলভাবে তৈরি হয়েছে!');
+        setUserFormMsg(editingUserId ? 'User updated successfully!' : 'New user created successfully!');
         fetchAllData();
         setTimeout(() => {
           setShowUserModal(false);
           setUserFormMsg(null);
         }, 700);
       } else {
-        setUserFormMsg(data.message || 'অপারেশন ব্যর্থ হয়েছে।');
+        setUserFormMsg(data.message || 'Operation failed.');
       }
     } catch {
-      setUserFormMsg('সার্ভার এরর হয়েছে।');
+      setUserFormMsg('Server error occurred.');
     } finally {
       setSavingUser(false);
     }
   };
 
   const handleDeleteUser = async (id: number | string, username: string) => {
-    if (!confirm(`আপনি কি নিশ্চিত যে ইউজার "${username}"-কে সিস্টেম থেকে মুছে ফেলতে চান?`)) return;
+    if (!confirm(`Are you sure you want to delete user "${username}" from the system?`)) return;
 
     try {
       const res = await fetch(`/api/users/${id}`, {
@@ -640,10 +640,10 @@ export default function AdminPage() {
       if (data.success) {
         fetchAllData();
       } else {
-        alert(data.message || 'ইউজার ডিলিট করা সম্ভব হয়নি।');
+        alert(data.message || 'Could not delete user.');
       }
     } catch {
-      alert('সার্ভার এরর হয়েছে।');
+      alert('Server error occurred.');
     }
   };
 
@@ -836,7 +836,7 @@ export default function AdminPage() {
   // MEMBER DUES & PAYMENTS HANDLERS
   // ----------------------------------------------------------------------------
   const handleGenerateMonthlyDues = async () => {
-    if (!confirm('চলতি মাসের জন্য সকল মেম্বারদের নির্ধারিত মাসিক চাঁদার ডিউ তৈরি করতে চান?')) return;
+    if (!confirm('Are you sure you want to generate monthly dues for all eligible members for this month?')) return;
     try {
       setGeneratingMonthly(true);
       const res = await fetch('/api/dues/generate-monthly', {
@@ -846,13 +846,13 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(data.message || 'মাসিক চাঁদা সফলভাবে জেনারেট করা হয়েছে।');
+        alert(data.message || 'Monthly dues generated successfully.');
         fetchAllData();
       } else {
-        alert(data.message || 'মাসিক চাঁদা জেনারেট করা সম্ভব হয়নি।');
+        alert(data.message || 'Could not generate monthly dues.');
       }
     } catch {
-      alert('সার্ভারের সাথে সংযোগ করতে সমস্যা হয়েছে।');
+      alert('Network error while connecting to server.');
     } finally {
       setGeneratingMonthly(false);
     }
@@ -875,7 +875,7 @@ export default function AdminPage() {
   const handleSaveDue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!addDueForm.title || Number(addDueForm.amount) <= 0) {
-      setAddDueMsg('চাঁদার বিবরণ এবং সঠিক টাকার পরিমাণ প্রদান করুন।');
+      setAddDueMsg('Please provide a valid title and fee amount.');
       return;
     }
     setSavingDue(true);
@@ -889,17 +889,17 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setAddDueMsg('ডিউ সফলভাবে তৈরি করা হয়েছে!');
+        setAddDueMsg('Due record created successfully!');
         fetchAllData();
         setTimeout(() => {
           setShowAddDueModal(false);
           setAddDueMsg(null);
         }, 700);
       } else {
-        setAddDueMsg(data.message || 'ডিউ তৈরি করা সম্ভব হয়নি।');
+        setAddDueMsg(data.message || 'Could not create due record.');
       }
     } catch {
-      setAddDueMsg('সার্ভার এরর হয়েছে।');
+      setAddDueMsg('Server error occurred.');
     } finally {
       setSavingDue(false);
     }
@@ -923,7 +923,7 @@ export default function AdminPage() {
     if (!payingDue) return;
     const inputAmount = Number(payForm.paidAmount) || 0;
     if (inputAmount <= 0) {
-      setPayMsg('সঠিক পেমেন্টের টাকার পরিমাণ লিখুন।');
+      setPayMsg('Please enter a valid payment amount.');
       return;
     }
 
@@ -945,7 +945,7 @@ export default function AdminPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setPayMsg('পেমেন্ট সফলভাবে সংরক্ষিত হয়েছে!');
+        setPayMsg('Payment recorded successfully!');
         fetchAllData();
         setTimeout(() => {
           setShowPayModal(false);
@@ -953,10 +953,10 @@ export default function AdminPage() {
           setPayingDue(null);
         }, 800);
       } else {
-        setPayMsg(data.message || 'পেমেন্ট সম্পন্ন করা সম্ভব হয়নি।');
+        setPayMsg(data.message || 'Could not process payment.');
       }
     } catch {
-      setPayMsg('সার্ভার এরর হয়েছে।');
+      setPayMsg('Server error occurred.');
     } finally {
       setProcessingPayment(false);
     }
@@ -991,7 +991,7 @@ export default function AdminPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setEditDueMsg('ডিউ সফলভাবে আপডেট হয়েছে!');
+        setEditDueMsg('Due updated successfully!');
         fetchAllData();
         setTimeout(() => {
           setShowEditDueModal(false);
@@ -999,17 +999,17 @@ export default function AdminPage() {
           setEditingDue(null);
         }, 700);
       } else {
-        setEditDueMsg(data.message || 'আপডেট করা সম্ভব হয়নি।');
+        setEditDueMsg(data.message || 'Could not update due.');
       }
     } catch {
-      setEditDueMsg('সার্ভার এরর হয়েছে।');
+      setEditDueMsg('Server error occurred.');
     } finally {
       setSavingEditDue(false);
     }
   };
 
   const handleDeleteDue = async (id: number | string, title: string) => {
-    if (!confirm(`আপনি কি নিশ্চিত যে "${title}" ডিউটি ডিলিট করতে চান?`)) return;
+    if (!confirm(`Are you sure you want to delete due record "${title}"?`)) return;
 
     try {
       const res = await fetch(`/api/dues/${id}`, {
@@ -1020,10 +1020,10 @@ export default function AdminPage() {
       if (data.success) {
         fetchAllData();
       } else {
-        alert(data.message || 'ডিউ ডিলিট করা সম্ভব হয়নি।');
+        alert(data.message || 'Could not delete due.');
       }
     } catch {
-      alert('সার্ভার এরর হয়েছে।');
+      alert('Server error occurred.');
     }
   };
 
@@ -1378,7 +1378,7 @@ export default function AdminPage() {
         { id: 'adminMembers', label: 'Members & Committee', icon: UserCheck, count: members.length, perm: 'members' },
         {
           id: 'adminDues',
-          label: 'মেম্বার চাঁদা ও পেমেন্ট',
+          label: 'Member Fees & Dues',
           icon: CreditCard,
           badge: duesStats.pendingCount > 0 ? duesStats.pendingCount : undefined,
           count: duesStats.pendingCount === 0 ? dues.length : undefined,
@@ -1404,7 +1404,7 @@ export default function AdminPage() {
       group: 'INSIGHTS & SYSTEM',
       items: [
         { id: 'adminAnalytics', label: 'Analytics & Reports', icon: BarChart3, perm: 'analytics' },
-        { id: 'adminUsers', label: 'ইউজার ও পারমিশন', icon: ShieldCheck, count: users.length, perm: 'users' },
+        { id: 'adminUsers', label: 'User & Permissions', icon: ShieldCheck, count: users.length, perm: 'users' },
         { id: 'adminSettings', label: 'Settings & Security', icon: Key, perm: 'settings' },
       ],
     },
@@ -3298,11 +3298,11 @@ export default function AdminPage() {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label>মাসিক নির্ধারিত চাঁদা (টাকা)</label>
+                        <label>Monthly Subscription Fee (৳)</label>
                         <input
                           type="number"
                           min="0"
-                          placeholder="যেমন: ২০০ বা ৫০০"
+                          placeholder="e.g. 200 or 500"
                           value={memberFormData.monthlyFee ?? 0}
                           onChange={(e) => setMemberFormData({ ...memberFormData, monthlyFee: parseFloat(e.target.value) || 0 })}
                         />
@@ -3441,10 +3441,10 @@ export default function AdminPage() {
             >
               <div>
                 <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
-                  মেম্বার চাঁদা ও পেমেন্ট ব্যবস্থাপনা
+                  Member Fees & Dues Management
                 </h3>
                 <p style={{ margin: '3px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  সংগঠনের মেম্বারদের মাসিক সাবস্ক্রিপশন, ইভেন্ট চাঁদা ও পেমেন্ট হিস্ট্রি
+                  Manage monthly member subscriptions, event dues, and payment histories
                 </p>
               </div>
 
@@ -3469,7 +3469,7 @@ export default function AdminPage() {
                   }}
                 >
                   <RefreshCw size={15} className={generatingMonthly ? 'spin-icon' : ''} />
-                  <span>{generatingMonthly ? 'জেনারেট হচ্ছে...' : 'চলতি মাসের চাঁদা তৈরি করুন'}</span>
+                  <span>{generatingMonthly ? 'Generating...' : 'Generate Monthly Dues'}</span>
                 </button>
 
                 <button
@@ -3491,7 +3491,7 @@ export default function AdminPage() {
                   }}
                 >
                   <Plus size={16} />
-                  <span>নতুন চাঁদা / ইভেন্ট ডিউ</span>
+                  <span>Add Custom / Event Due</span>
                 </button>
               </div>
             </div>
@@ -3507,11 +3507,11 @@ export default function AdminPage() {
             >
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>মোট ধার্যকৃত চাঁদা</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Assigned Dues</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
                     ৳{duesStats.totalDueAmount.toLocaleString()}
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>সর্বমোট {dues.length} টি ডিউ</span>
+                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>{dues.length} total dues billed</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
                   <Wallet size={20} />
@@ -3520,11 +3520,11 @@ export default function AdminPage() {
 
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সংগৃহীত মোট চাঁদা</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Collected</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#15803d', marginTop: '3px' }}>
                     ৳{duesStats.totalPaidAmount.toLocaleString()}
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>{duesStats.paidCount} টি সম্পূর্ণ পরিশোধিত</span>
+                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>{duesStats.paidCount} fully paid</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
                   <CheckCircle2 size={20} />
@@ -3533,11 +3533,11 @@ export default function AdminPage() {
 
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>মোট বকেয়া টাকা</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Outstanding Due</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#dc2626', marginTop: '3px' }}>
                     ৳{duesStats.totalPendingAmount.toLocaleString()}
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600 }}>{duesStats.pendingCount} টি ডিউ বকেয়া/আংশিক</span>
+                  <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600 }}>{duesStats.pendingCount} pending / partial</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
                   <Clock size={20} />
@@ -3546,11 +3546,11 @@ export default function AdminPage() {
 
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>আদায় সম্পন্ন হার</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Collection Rate</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2563eb', marginTop: '3px' }}>
                     {duesStats.totalDueAmount > 0 ? Math.round((duesStats.totalPaidAmount / duesStats.totalDueAmount) * 100) : 0}%
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 600 }}>মোট চাঁদার অনুপাত</span>
+                  <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 600 }}>of total assigned fees</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
                   <BarChart3 size={20} />
@@ -3564,7 +3564,7 @@ export default function AdminPage() {
                 <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
-                  placeholder="মেম্বারের নাম, মোবাইল বা চাঁদার শিরোনাম দিয়ে খুঁজুন..."
+                  placeholder="Search by member name, phone, or fee title..."
                   value={dueSearchQuery}
                   onChange={(e) => setDueSearchQuery(e.target.value)}
                   className="admin-search-input"
@@ -3602,28 +3602,28 @@ export default function AdminPage() {
                   onClick={() => setDueStatusFilter('all')}
                   className={`admin-filter-chip ${dueStatusFilter === 'all' ? 'active' : ''}`}
                 >
-                  সকল ({dues.length})
+                  All ({dues.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setDueStatusFilter('pending')}
                   className={`admin-filter-chip ${dueStatusFilter === 'pending' ? 'active' : ''}`}
                 >
-                  বকেয়া ({dues.filter((d) => d.status === 'pending').length})
+                  Pending ({dues.filter((d) => d.status === 'pending').length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setDueStatusFilter('partial')}
                   className={`admin-filter-chip ${dueStatusFilter === 'partial' ? 'active' : ''}`}
                 >
-                  আংশিক পরিশোধ ({dues.filter((d) => d.status === 'partial').length})
+                  Partial Paid ({dues.filter((d) => d.status === 'partial').length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setDueStatusFilter('paid')}
                   className={`admin-filter-chip ${dueStatusFilter === 'paid' ? 'active' : ''}`}
                 >
-                  পরিশোধিত ({dues.filter((d) => d.status === 'paid').length})
+                  Paid ({dues.filter((d) => d.status === 'paid').length})
                 </button>
               </div>
 
@@ -3634,21 +3634,21 @@ export default function AdminPage() {
                   onClick={() => setDueTypeFilter('all')}
                   className={`admin-filter-chip ${dueTypeFilter === 'all' ? 'active' : ''}`}
                 >
-                  সকল ধরন
+                  All Types
                 </button>
                 <button
                   type="button"
                   onClick={() => setDueTypeFilter('monthly')}
                   className={`admin-filter-chip ${dueTypeFilter === 'monthly' ? 'active' : ''}`}
                 >
-                  মাসিক চাঁদা
+                  Monthly Fees
                 </button>
                 <button
                   type="button"
                   onClick={() => setDueTypeFilter('event')}
                   className={`admin-filter-chip ${dueTypeFilter === 'event' ? 'active' : ''}`}
                 >
-                  ইভেন্ট / অন্যান্য
+                  Event / Other
                 </button>
               </div>
 
@@ -3667,7 +3667,7 @@ export default function AdminPage() {
                   outline: 'none',
                 }}
               >
-                <option value="all">সকল মেম্বার</option>
+                <option value="all">All Members</option>
                 {members.map((m) => (
                   <option key={m.id} value={String(m.id)}>
                     {m.name} ({m.designation})
@@ -3683,14 +3683,14 @@ export default function AdminPage() {
                   <table className="admin-table">
                     <thead>
                       <tr>
-                        <th>মেম্বার</th>
-                        <th>চাঁদার বিবরণ ও ধরন</th>
-                        <th>ধার্যকৃত টাকা</th>
-                        <th>পরিশোধিত</th>
-                        <th>বকেয়া</th>
-                        <th>স্ট্যাটাস</th>
-                        <th>পেমেন্ট তথ্য</th>
-                        <th style={{ textAlign: 'right' }}>অ্যাকশন</th>
+                        <th>Member</th>
+                        <th>Fee Title & Type</th>
+                        <th>Assigned Amount</th>
+                        <th>Paid</th>
+                        <th>Balance Due</th>
+                        <th>Status</th>
+                        <th>Payment Details</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3699,7 +3699,7 @@ export default function AdminPage() {
                         return (
                           <tr key={d.id}>
                             <td>
-                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{d.memberName || 'মেম্বার'}</div>
+                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{d.memberName || 'Member'}</div>
                               <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                                 {d.memberDesignation} {d.memberPhone ? `• ${d.memberPhone}` : ''}
                               </div>
@@ -3708,11 +3708,11 @@ export default function AdminPage() {
                               <div style={{ fontWeight: 600, color: '#1e293b' }}>{d.title}</div>
                               <div style={{ marginTop: '3px', display: 'flex', gap: '6px' }}>
                                 <span className={d.dueType === 'monthly' ? 'admin-badge-monthly' : 'admin-badge-event'}>
-                                  {d.dueType === 'monthly' ? 'মাসিক চাঁদা' : 'ইভেন্ট / কাস্টম'}
+                                  {d.dueType === 'monthly' ? 'Monthly Fee' : 'Event / Custom'}
                                 </span>
                                 {d.dueDate && (
                                   <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                                    শেষ তারিখ: {d.dueDate}
+                                    Due: {d.dueDate}
                                   </span>
                                 )}
                               </div>
@@ -3743,10 +3743,10 @@ export default function AdminPage() {
                                 {d.status === 'pending' && <Clock size={11} />}
                                 <span>
                                   {d.status === 'paid'
-                                    ? 'পরিশোধিত'
+                                    ? 'Paid'
                                     : d.status === 'partial'
-                                    ? 'আংশিক পরিশোধ'
-                                    : 'বকেয়া'}
+                                    ? 'Partial'
+                                    : 'Pending'}
                                 </span>
                               </span>
                             </td>
@@ -3759,7 +3759,7 @@ export default function AdminPage() {
                                   </div>
                                 </div>
                               ) : (
-                                <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>পরিশোধ হয়নি</span>
+                                <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Not Paid</span>
                               )}
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -3769,10 +3769,10 @@ export default function AdminPage() {
                                   onClick={() => handleOpenPayModal(d)}
                                   className="admin-btn-action admin-btn-pay"
                                   style={{ marginRight: '6px' }}
-                                  title="পেমেন্ট গ্রহণ করুন"
+                                  title="Collect Payment"
                                 >
                                   <DollarSign size={13} />
-                                  <span>পেমেন্ট নিন</span>
+                                  <span>Pay</span>
                                 </button>
                               )}
                               {d.paidAmount > 0 && (
@@ -3781,10 +3781,10 @@ export default function AdminPage() {
                                   onClick={() => handleOpenReceipt(d)}
                                   className="admin-btn-action admin-btn-receipt"
                                   style={{ marginRight: '6px' }}
-                                  title="রশিদ দেখুন / প্রিন্ট"
+                                  title="View / Print Receipt"
                                 >
                                   <Receipt size={13} />
-                                  <span>রশিদ</span>
+                                  <span>Receipt</span>
                                 </button>
                               )}
                               <button
@@ -3792,7 +3792,7 @@ export default function AdminPage() {
                                 onClick={() => handleOpenEditDue(d)}
                                 className="admin-btn-action admin-btn-edit"
                                 style={{ marginRight: '6px' }}
-                                title="এডিট করুন"
+                                title="Edit Due"
                               >
                                 <Edit2 size={13} />
                               </button>
@@ -3800,7 +3800,7 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={() => handleDeleteDue(d.id, d.title)}
                                 className="admin-btn-action admin-btn-delete"
-                                title="ডিলিট করুন"
+                                title="Delete Due"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -3811,7 +3811,7 @@ export default function AdminPage() {
                       {filteredDues.length === 0 && (
                         <tr>
                           <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                            কোনো চাঁদা বা ডিউ রেকর্ড পাওয়া যায়নি।
+                            No fee or due records found.
                           </td>
                         </tr>
                       )}
@@ -3831,7 +3831,7 @@ export default function AdminPage() {
                       <div className="admin-member-card-title" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
-                            <div className="admin-member-card-name">{d.memberName || 'মেম্বার'}</div>
+                            <div className="admin-member-card-name">{d.memberName || 'Member'}</div>
                             <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{d.memberDesignation}</span>
                           </div>
                           <span
@@ -3843,7 +3843,7 @@ export default function AdminPage() {
                                 : 'admin-badge-pending'
                             }
                           >
-                            {d.status === 'paid' ? 'পরিশোধিত' : d.status === 'partial' ? 'আংশিক' : 'বকেয়া'}
+                            {d.status === 'paid' ? 'Paid' : d.status === 'partial' ? 'Partial' : 'Pending'}
                           </span>
                         </div>
                       </div>
@@ -3853,28 +3853,28 @@ export default function AdminPage() {
                       <div className="admin-member-card-row">
                         <span style={{ fontWeight: 600, color: '#0f172a' }}>{d.title}</span>
                         <span className={d.dueType === 'monthly' ? 'admin-badge-monthly' : 'admin-badge-event'}>
-                          {d.dueType === 'monthly' ? 'মাসিক চাঁদা' : 'ইভেন্ট'}
+                          {d.dueType === 'monthly' ? 'Monthly' : 'Event'}
                         </span>
                       </div>
 
                       <div className="admin-member-card-row" style={{ paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
                         <div>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>ধার্যকৃত:</span>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Assigned:</span>
                           <span style={{ fontWeight: 800, color: '#0f172a' }}>৳{d.amount}</span>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>পরিশোধিত:</span>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Paid:</span>
                           <span style={{ fontWeight: 700, color: '#15803d' }}>৳{d.paidAmount}</span>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>বকেয়া:</span>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Balance:</span>
                           <span style={{ fontWeight: 800, color: remaining > 0 ? '#dc2626' : '#15803d' }}>৳{remaining}</span>
                         </div>
                       </div>
 
                       {d.paymentDate && (
                         <div style={{ fontSize: '0.75rem', color: '#64748b', paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
-                          পেমেন্ট: {d.paymentDate} • {d.paymentMethod || 'Cash'} {d.paymentNote ? `(${d.paymentNote})` : ''}
+                          Payment: {d.paymentDate} • {d.paymentMethod || 'Cash'} {d.paymentNote ? `(${d.paymentNote})` : ''}
                         </div>
                       )}
                     </div>
@@ -3888,7 +3888,7 @@ export default function AdminPage() {
                           style={{ flex: 1 }}
                         >
                           <DollarSign size={14} />
-                          <span>পেমেন্ট নিন</span>
+                          <span>Pay</span>
                         </button>
                       )}
                       {d.paidAmount > 0 && (
@@ -3898,7 +3898,7 @@ export default function AdminPage() {
                           className="admin-btn-action admin-btn-receipt"
                         >
                           <Receipt size={14} />
-                          <span>রশিদ</span>
+                          <span>Receipt</span>
                         </button>
                       )}
                       <button
@@ -3923,7 +3923,7 @@ export default function AdminPage() {
               {filteredDues.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>
-                    কোনো চাঁদা বা ডিউ পাওয়া যায়নি
+                    No fee or due records found
                   </p>
                 </div>
               )}
@@ -3935,7 +3935,7 @@ export default function AdminPage() {
                 <div className="admin-card admin-modal-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
-                      নতুন চাঁদা / ইভেন্ট ডিউ তৈরি করুন
+                      Create New Fee / Event Due
                     </h3>
                     <button
                       onClick={() => setShowAddDueModal(false)}
@@ -3955,7 +3955,7 @@ export default function AdminPage() {
                   <form onSubmit={handleSaveDue}>
                     <div className="form-grid">
                       <div className="form-group full">
-                        <label>কার জন্য ডিউ তৈরি হবে? *</label>
+                        <label>Target Audience *</label>
                         <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
                             <input
@@ -3964,7 +3964,7 @@ export default function AdminPage() {
                               checked={addDueForm.targetType === 'single'}
                               onChange={() => setAddDueForm({ ...addDueForm, targetType: 'single', memberId: members.length > 0 ? String(members[0].id) : '' })}
                             />
-                            নির্দিষ্ট একজন মেম্বার
+                            Single Member
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
                             <input
@@ -3973,23 +3973,23 @@ export default function AdminPage() {
                               checked={addDueForm.targetType === 'all'}
                               onChange={() => setAddDueForm({ ...addDueForm, targetType: 'all', memberId: 'all' })}
                             />
-                            সকল মেম্বারদের জন্য একসাথে ({members.length} জন)
+                            All Members ({members.length} total)
                           </label>
                         </div>
                       </div>
 
                       {addDueForm.targetType === 'single' && (
                         <div className="form-group full">
-                          <label>মেম্বার নির্বাচন করুন *</label>
+                          <label>Select Member *</label>
                           <select
                             required
                             value={addDueForm.memberId}
                             onChange={(e) => setAddDueForm({ ...addDueForm, memberId: e.target.value })}
                           >
-                            <option value="">-- মেম্বার নির্বাচন করুন --</option>
+                            <option value="">-- Choose Member --</option>
                             {members.map((m) => (
                               <option key={m.id} value={String(m.id)}>
-                                {m.name} ({m.designation}) - বর্তমান ফি: ৳{m.monthlyFee || 0}
+                                {m.name} ({m.designation}) - Monthly Fee: ৳{m.monthlyFee || 0}
                               </option>
                             ))}
                           </select>
@@ -3997,42 +3997,42 @@ export default function AdminPage() {
                       )}
 
                       <div className="form-group full">
-                        <label>চাঁদার শিরোনাম / বিবরণ *</label>
+                        <label>Fee Title / Description *</label>
                         <input
                           type="text"
                           required
-                          placeholder="যেমন: ইফতার মাহফিল চাঁদা ২০২৬ / বিশেষ অনুদান"
+                          placeholder="e.g. Annual Iftar Gathering 2026 / Special Contribution"
                           value={addDueForm.title}
                           onChange={(e) => setAddDueForm({ ...addDueForm, title: e.target.value })}
                         />
                       </div>
 
                       <div className="form-group">
-                        <label>চাঁদার ধরন *</label>
+                        <label>Fee Type *</label>
                         <select
                           value={addDueForm.dueType}
                           onChange={(e) => setAddDueForm({ ...addDueForm, dueType: e.target.value })}
                         >
-                          <option value="event">ইভেন্ট চাঁদা (Event Fee)</option>
-                          <option value="monthly">মাসিক চাঁদা (Monthly Subscription)</option>
-                          <option value="custom">অন্যান্য কাস্টম ডিউ (Custom)</option>
+                          <option value="event">Event Fee</option>
+                          <option value="monthly">Monthly Subscription</option>
+                          <option value="custom">Custom Due</option>
                         </select>
                       </div>
 
                       <div className="form-group">
-                        <label>টাকার পরিমাণ (৳) *</label>
+                        <label>Amount (৳) *</label>
                         <input
                           type="number"
                           required
                           min="1"
-                          placeholder="যেমন: ৫০০"
+                          placeholder="e.g. 500"
                           value={addDueForm.amount || ''}
                           onChange={(e) => setAddDueForm({ ...addDueForm, amount: parseFloat(e.target.value) || 0 })}
                         />
                       </div>
 
                       <div className="form-group">
-                        <label>পরিশোধের শেষ তারিখ</label>
+                        <label>Due Date</label>
                         <input
                           type="date"
                           value={addDueForm.dueDate || ''}
@@ -4041,10 +4041,10 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group full">
-                        <label>নোট / মন্তব্য (ঐচ্ছিক)</label>
+                        <label>Notes / Remarks (Optional)</label>
                         <input
                           type="text"
-                          placeholder="যেমন: চাঁভালি ঈদ পুনর্মিলনী উপলক্ষ্যে"
+                          placeholder="e.g. Special fund collection for Eid event"
                           value={addDueForm.notes || ''}
                           onChange={(e) => setAddDueForm({ ...addDueForm, notes: e.target.value })}
                         />
@@ -4068,7 +4068,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        {savingDue ? 'তৈরি হচ্ছে...' : 'ডিউ সংরক্ষণ করুন'}
+                        {savingDue ? 'Saving...' : 'Save & Create Due'}
                       </button>
                       <button
                         type="button"
@@ -4083,7 +4083,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        বাতিল
+                        Cancel
                       </button>
                     </div>
                   </form>
@@ -4098,7 +4098,7 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div>
                       <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
-                        পেমেন্ট গ্রহণ ও পরিশোধ
+                        Record Due Payment
                       </h3>
                       <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
                         {payingDue.memberName} • {payingDue.title}
@@ -4127,15 +4127,15 @@ export default function AdminPage() {
                     }}
                   >
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>মোট চাঁদা</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Total Fee</span>
                       <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>৳{payingDue.amount}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>পূর্ব পরিশোধিত</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Paid So Far</span>
                       <strong style={{ fontSize: '1.1rem', color: '#15803d' }}>৳{payingDue.paidAmount}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>অবশিষ্ট বকেয়া</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Remaining Due</span>
                       <strong style={{ fontSize: '1.1rem', color: '#dc2626' }}>
                         ৳{Math.max(0, payingDue.amount - payingDue.paidAmount)}
                       </strong>
@@ -4151,19 +4151,19 @@ export default function AdminPage() {
                   <form onSubmit={handleProcessPayment}>
                     <div className="form-grid">
                       <div className="form-group">
-                        <label>জমার পরিমাণ (টাকা) *</label>
+                        <label>Payment Amount (৳) *</label>
                         <input
                           type="number"
                           required
                           min="1"
-                          placeholder="টাকার পরিমাণ লিখুন"
+                          placeholder="Enter payment amount"
                           value={payForm.paidAmount || ''}
                           onChange={(e) => setPayForm({ ...payForm, paidAmount: parseFloat(e.target.value) || 0 })}
                         />
                       </div>
 
                       <div className="form-group">
-                        <label>পেমেন্টের তারিখ *</label>
+                        <label>Payment Date *</label>
                         <input
                           type="date"
                           required
@@ -4173,24 +4173,24 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <label>পেমেন্ট মাধ্যম *</label>
+                        <label>Payment Method *</label>
                         <select
                           value={payForm.paymentMethod}
                           onChange={(e) => setPayForm({ ...payForm, paymentMethod: e.target.value })}
                         >
-                          <option value="cash">নগদ গ্রহণ (Cash)</option>
-                          <option value="bkash">বিকাশ (bKash)</option>
-                          <option value="nagad">নগদ (Nagad App)</option>
-                          <option value="rocket">রকেট (Rocket)</option>
-                          <option value="bank">ব্যাংক একাউন্ট (Bank Transfer)</option>
+                          <option value="cash">Cash</option>
+                          <option value="bkash">bKash</option>
+                          <option value="nagad">Nagad</option>
+                          <option value="rocket">Rocket</option>
+                          <option value="bank">Bank Transfer</option>
                         </select>
                       </div>
 
                       <div className="form-group">
-                        <label>ট্রানজেকশন আইডি / রেফারেন্স নোট</label>
+                        <label>Transaction ID / Reference Note</label>
                         <input
                           type="text"
-                          placeholder="যেমন: TrxID: 9X7B6... বা ক্যাশ গ্রহণকারী"
+                          placeholder="e.g. TrxID: 9X7B6... or collector name"
                           value={payForm.paymentNote || ''}
                           onChange={(e) => setPayForm({ ...payForm, paymentNote: e.target.value })}
                         />
@@ -4214,7 +4214,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        {processingPayment ? 'পেমেন্ট হচ্ছে...' : 'পেমেন্ট নিশ্চিত করুন'}
+                        {processingPayment ? 'Processing...' : 'Confirm Payment'}
                       </button>
                       <button
                         type="button"
@@ -4229,7 +4229,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        বাতিল
+                        Cancel
                       </button>
                     </div>
                   </form>
@@ -4243,7 +4243,7 @@ export default function AdminPage() {
                 <div className="admin-card admin-modal-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
-                      ডিউ তথ্য এডিট করুন
+                      Edit Due Record
                     </h3>
                     <button
                       onClick={() => setShowEditDueModal(false)}
@@ -4263,7 +4263,7 @@ export default function AdminPage() {
                   <form onSubmit={handleSaveEditDue}>
                     <div className="form-grid">
                       <div className="form-group full">
-                        <label>চাঁদার শিরোনাম *</label>
+                        <label>Fee Title *</label>
                         <input
                           type="text"
                           required
@@ -4273,7 +4273,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <label>মোট ধার্যকৃত টাকা *</label>
+                        <label>Total Amount (৳) *</label>
                         <input
                           type="number"
                           required
@@ -4284,7 +4284,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <label>পরিশোধিত টাকা</label>
+                        <label>Paid Amount (৳)</label>
                         <input
                           type="number"
                           min="0"
@@ -4294,19 +4294,19 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <label>স্ট্যাটাস</label>
+                        <label>Payment Status</label>
                         <select
                           value={editDueForm.status}
                           onChange={(e) => setEditDueForm({ ...editDueForm, status: e.target.value })}
                         >
-                          <option value="pending">বকেয়া (Pending)</option>
-                          <option value="partial">আংশিক পরিশোধ (Partial)</option>
-                          <option value="paid">পরিশোধিত (Paid)</option>
+                          <option value="pending">Pending</option>
+                          <option value="partial">Partial Paid</option>
+                          <option value="paid">Paid</option>
                         </select>
                       </div>
 
                       <div className="form-group">
-                        <label>পরিশোধের শেষ তারিখ</label>
+                        <label>Due Date</label>
                         <input
                           type="date"
                           value={editDueForm.dueDate}
@@ -4315,7 +4315,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group full">
-                        <label>মন্তব্য / নোট</label>
+                        <label>Notes / Remarks</label>
                         <input
                           type="text"
                           value={editDueForm.notes}
@@ -4341,7 +4341,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        {savingEditDue ? 'সংরক্ষণ হচ্ছে...' : 'আপডেট সম্পন্ন করুন'}
+                        {savingEditDue ? 'Updating...' : 'Update Due'}
                       </button>
                       <button
                         type="button"
@@ -4356,7 +4356,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        বাতিল
+                        Cancel
                       </button>
                     </div>
                   </form>
@@ -4370,7 +4370,7 @@ export default function AdminPage() {
                 <div className="admin-card admin-modal-card" style={{ maxWidth: '520px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: 800 }}>
-                      পেমেন্ট মানি রিসিট
+                      Money Receipt
                     </h3>
                     <button
                       onClick={() => setShowReceiptModal(false)}
@@ -4388,53 +4388,53 @@ export default function AdminPage() {
                         <Droplet size={26} fill="#dc2626" />
                       </div>
                       <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                        চাঁভালি রক্ত ফাউন্ডেশন
+                        CHAVALI BLOOD FOUNDATION
                       </h3>
                       <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                        মেম্বার চাঁদা ও অনুদান জমা রশিদ
+                        Member Fee & Contribution Money Receipt
                       </p>
                       <div style={{ marginTop: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>
-                        রশিদ নং: #CBF-REC-{receiptDue.id} | তারিখ: {receiptDue.paymentDate || new Date().toISOString().split('T')[0]}
+                        Receipt No: #CBF-REC-{receiptDue.id} | Date: {receiptDue.paymentDate || new Date().toISOString().split('T')[0]}
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem', marginBottom: '20px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>মেম্বারের নাম:</span>
+                        <span style={{ color: '#64748b' }}>Member Name:</span>
                         <strong style={{ color: '#0f172a' }}>{receiptDue.memberName}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>পদবী:</span>
-                        <span style={{ color: '#0f172a' }}>{receiptDue.memberDesignation || 'সদস্য'}</span>
+                        <span style={{ color: '#64748b' }}>Designation:</span>
+                        <span style={{ color: '#0f172a' }}>{receiptDue.memberDesignation || 'Member'}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>চাঁদার বিবরণ:</span>
+                        <span style={{ color: '#64748b' }}>Fee Description:</span>
                         <span style={{ color: '#0f172a', fontWeight: 600 }}>{receiptDue.title}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>পেমেন্ট মাধ্যম:</span>
+                        <span style={{ color: '#64748b' }}>Payment Method:</span>
                         <span style={{ color: '#0f172a', textTransform: 'capitalize' }}>
-                          {receiptDue.paymentMethod || 'নগদ গ্রহণ'} {receiptDue.paymentNote ? `(${receiptDue.paymentNote})` : ''}
+                          {receiptDue.paymentMethod || 'Cash'} {receiptDue.paymentNote ? `(${receiptDue.paymentNote})` : ''}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f1f5f9', paddingBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>মোট নির্ধারিত চাঁদা:</span>
+                        <span style={{ color: '#64748b' }}>Total Assigned Amount:</span>
                         <span style={{ color: '#0f172a' }}>৳{receiptDue.amount}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
-                        <span style={{ color: '#065f46', fontWeight: 700 }}>পরিশোধিত টাকা:</span>
+                        <span style={{ color: '#065f46', fontWeight: 700 }}>Amount Paid:</span>
                         <strong style={{ color: '#15803d', fontSize: '1.15rem' }}>৳{receiptDue.paidAmount}</strong>
                       </div>
                       {Math.max(0, receiptDue.amount - receiptDue.paidAmount) > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: '#fef2f2', borderRadius: '8px' }}>
-                          <span style={{ color: '#991b1b', fontWeight: 600 }}>অবশিষ্ট বকেয়া:</span>
+                          <span style={{ color: '#991b1b', fontWeight: 600 }}>Remaining Balance:</span>
                           <strong style={{ color: '#dc2626' }}>৳{Math.max(0, receiptDue.amount - receiptDue.paidAmount)}</strong>
                         </div>
                       )}
                     </div>
 
                     <div style={{ textAlign: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '14px', fontSize: '0.78rem', color: '#64748b' }}>
-                      <p style={{ margin: 0 }}>স্বেচ্ছাসেবী রক্তদানে আপনার নিয়মিত অবদান প্রশংসনীয়। ধন্যবাদ!</p>
+                      <p style={{ margin: 0 }}>Thank you for your valuable contribution to humanitarian voluntary service.</p>
                     </div>
                   </div>
 
@@ -4459,7 +4459,7 @@ export default function AdminPage() {
                       }}
                     >
                       <Printer size={16} />
-                      <span>রশিদ প্রিন্ট / PDF সংরক্ষণ</span>
+                      <span>Print / Save PDF</span>
                     </button>
                     <button
                       type="button"
@@ -4474,7 +4474,7 @@ export default function AdminPage() {
                         cursor: 'pointer',
                       }}
                     >
-                      বন্ধ করুন
+                      Close
                     </button>
                   </div>
                 </div>
@@ -5084,10 +5084,10 @@ export default function AdminPage() {
             >
               <div>
                 <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>
-                  ইউজার ও পারমিশন ব্যবস্থাপনা
+                  User & Permissions Management
                 </h3>
                 <p style={{ margin: '3px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  নতুন ইউজার তৈরি করুন এবং টিকমার্কের মাধ্যমে নির্দিষ্ট মডিউলের পারমিশন নির্ধারণ করুন
+                  Create system user accounts and assign granular module permissions with checkboxes
                 </p>
               </div>
 
@@ -5110,7 +5110,7 @@ export default function AdminPage() {
                 }}
               >
                 <UserPlus size={16} />
-                <span>নতুন ইউজার তৈরি করুন</span>
+                <span>Create New User</span>
               </button>
             </div>
 
@@ -5125,11 +5125,11 @@ export default function AdminPage() {
             >
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>মোট সিস্টেম ইউজার</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total System Users</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
-                    {users.length} জন
+                    {users.length} Users
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>রেজিস্টার্ড একাউন্ট</span>
+                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>Registered accounts</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
                   <Users size={20} />
@@ -5138,11 +5138,11 @@ export default function AdminPage() {
 
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সুপার এডমিন</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Super Admins</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1d4ed8', marginTop: '3px' }}>
-                    {users.filter((u) => u.role === 'super_admin').length} জন
+                    {users.filter((u) => u.role === 'super_admin').length} Users
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 600 }}>পূর্ণ এক্সেসপ্রাপ্ত</span>
+                  <span style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 600 }}>Full unrestricted access</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1d4ed8' }}>
                   <ShieldCheck size={20} />
@@ -5151,11 +5151,11 @@ export default function AdminPage() {
 
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সাব-এডমিন / মডারেটর</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Sub-Admins / Moderators</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
-                    {users.filter((u) => u.role !== 'super_admin').length} জন
+                    {users.filter((u) => u.role !== 'super_admin').length} Users
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>কাস্টম পারমিশনপ্রাপ্ত</span>
+                  <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>Custom permissions assigned</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
                   <UserCog size={20} />
@@ -5164,11 +5164,11 @@ export default function AdminPage() {
 
               <div className="admin-stat-card">
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>সক্রিয় একাউন্ট</span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Active Accounts</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#15803d', marginTop: '3px' }}>
-                    {users.filter((u) => u.isActive !== false).length} জন
+                    {users.filter((u) => u.isActive !== false).length} Users
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>লগইন সক্রিয়</span>
+                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>Login enabled</span>
                 </div>
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
                   <CheckCircle2 size={20} />
@@ -5182,7 +5182,7 @@ export default function AdminPage() {
                 <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
-                  placeholder="ইউজারের নাম অথবা ইউজারনেম দিয়ে খুঁজুন..."
+                  placeholder="Search by user's full name or username..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="admin-search-input"
@@ -5221,11 +5221,11 @@ export default function AdminPage() {
                   <table className="admin-table">
                     <thead>
                       <tr>
-                        <th>ইউজার তথ্য</th>
-                        <th>রোল / ভূমিকা</th>
-                        <th>অনুমোদিত পারমিশনসমূহ</th>
-                        <th>স্ট্যাটাস</th>
-                        <th style={{ textAlign: 'right' }}>অ্যাকশন</th>
+                        <th>User Profile</th>
+                        <th>System Role</th>
+                        <th>Assigned Permissions</th>
+                        <th>Account Status</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5260,14 +5260,14 @@ export default function AdminPage() {
                             <td>
                               <span className={isSuper ? 'user-role-super' : 'user-role-sub'}>
                                 {isSuper ? <Shield size={12} /> : <UserCheck size={12} />}
-                                <span>{isSuper ? 'সুপার এডমিন' : 'সাব-এডমিন'}</span>
+                                <span>{isSuper ? 'Super Admin' : 'Sub-Admin'}</span>
                               </span>
                             </td>
                             <td>
                               {isSuper ? (
                                 <span className="perm-tag-chip" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#a7f3d0' }}>
                                   <Check size={11} />
-                                  <span>সকল মডিউলে পূর্ণ এক্সেস</span>
+                                  <span>Full access to all modules</span>
                                 </span>
                               ) : (
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '400px' }}>
@@ -5280,7 +5280,7 @@ export default function AdminPage() {
                                     );
                                   })}
                                   {(!u.permissions || u.permissions.length === 0) && (
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>কোনো পারমিশন দেওয়া হয়নি</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>No permissions assigned</span>
                                   )}
                                 </div>
                               )}
@@ -5288,7 +5288,7 @@ export default function AdminPage() {
                             <td>
                               <span className={u.isActive !== false ? 'user-status-active' : 'user-status-inactive'}>
                                 {u.isActive !== false ? <Check size={11} /> : <X size={11} />}
-                                <span>{u.isActive !== false ? 'সক্রিয় (Active)' : 'নিষ্ক্রিয় (Inactive)'}</span>
+                                <span>{u.isActive !== false ? 'Active' : 'Inactive'}</span>
                               </span>
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -5297,20 +5297,20 @@ export default function AdminPage() {
                                 onClick={() => handleOpenEditUser(u)}
                                 className="admin-btn-action admin-btn-edit"
                                 style={{ marginRight: '6px' }}
-                                title="এডিট ও পারমিশন পরিবর্তন"
+                                title="Edit Profile & Permissions"
                               >
                                 <Edit2 size={13} />
-                                <span>এডিট</span>
+                                <span>Edit</span>
                               </button>
                               {String(u.id) !== String(currentUser?.id) && (
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteUser(u.id, u.username)}
                                   className="admin-btn-action admin-btn-delete"
-                                  title="মুছে ফেলুন"
+                                  title="Delete User"
                                 >
                                   <Trash2 size={13} />
-                                  <span>ডিলিট</span>
+                                  <span>Delete</span>
                                 </button>
                               )}
                             </td>
@@ -5320,7 +5320,7 @@ export default function AdminPage() {
                       {filteredUsers.length === 0 && (
                         <tr>
                           <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                            কোনো ইউজার পাওয়া যায়নি।
+                            No users found.
                           </td>
                         </tr>
                       )}
@@ -5361,7 +5361,7 @@ export default function AdminPage() {
                             <span style={{ fontSize: '0.75rem', color: '#64748b' }}>@{u.username}</span>
                           </div>
                           <span className={u.isActive !== false ? 'user-status-active' : 'user-status-inactive'}>
-                            {u.isActive !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                            {u.isActive !== false ? 'Active' : 'Inactive'}
                           </span>
                         </div>
                       </div>
@@ -5369,19 +5369,19 @@ export default function AdminPage() {
 
                     <div className="admin-member-card-details">
                       <div className="admin-member-card-row">
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>রোল / ভূমিকা:</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>System Role:</span>
                         <span className={isSuper ? 'user-role-super' : 'user-role-sub'}>
-                          {isSuper ? 'সুপার এডমিন' : 'সাব-এডমিন'}
+                          {isSuper ? 'Super Admin' : 'Sub-Admin'}
                         </span>
                       </div>
 
                       <div style={{ paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
                         <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                          পারমিশনসমূহ:
+                          Permissions:
                         </span>
                         {isSuper ? (
                           <span className="perm-tag-chip" style={{ background: '#dcfce7', color: '#15803d' }}>
-                            সকল মডিউলে পূর্ণ এক্সেস
+                            Full access to all modules
                           </span>
                         ) : (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
@@ -5406,7 +5406,7 @@ export default function AdminPage() {
                         style={{ flex: 1 }}
                       >
                         <Edit2 size={14} />
-                        <span>এডিট ও পারমিশন</span>
+                        <span>Edit & Permissions</span>
                       </button>
                       {String(u.id) !== String(currentUser?.id) && (
                         <button
@@ -5415,7 +5415,7 @@ export default function AdminPage() {
                           className="admin-btn-action admin-btn-delete"
                         >
                           <Trash2 size={14} />
-                          <span>ডিলিট</span>
+                          <span>Delete</span>
                         </button>
                       )}
                     </div>
@@ -5430,7 +5430,7 @@ export default function AdminPage() {
                 <div className="admin-card admin-modal-card" style={{ maxWidth: '640px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 800 }}>
-                      {editingUserId ? 'ইউজার তথ্য ও পারমিশন পরিবর্তন' : 'নতুন ইউজার তৈরি ও পারমিশন নির্ধারণ'}
+                      {editingUserId ? 'Edit User & Modify Permissions' : 'Create New User & Assign Permissions'}
                     </h3>
                     <button
                       onClick={() => setShowUserModal(false)}
@@ -5450,23 +5450,23 @@ export default function AdminPage() {
                   <form onSubmit={handleSaveUser}>
                     <div className="form-grid">
                       <div className="form-group">
-                        <label>ইউজারের নাম (Full Name) *</label>
+                        <label>Full Name *</label>
                         <input
                           type="text"
                           required
-                          placeholder="যেমন: আহমদ করিম"
+                          placeholder="e.g. Ahmad Karim"
                           value={userFormData.name || ''}
                           onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
                         />
                       </div>
 
                       <div className="form-group">
-                        <label>লগইন ইউজারনেম *</label>
+                        <label>Login Username *</label>
                         <input
                           type="text"
                           required
                           disabled={Boolean(editingUserId)}
-                          placeholder="যেমন: karim_admin"
+                          placeholder="e.g. karim_admin"
                           value={userFormData.username}
                           onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
                           style={{ background: editingUserId ? '#f1f5f9' : '#ffffff' }}
@@ -5474,35 +5474,35 @@ export default function AdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <label>{editingUserId ? 'নতুন পাসওয়ার্ড (ঐচ্ছিক)' : 'লগইন পাসওয়ার্ড *'}</label>
+                        <label>{editingUserId ? 'New Password (Optional)' : 'Login Password *'}</label>
                         <input
                           type="password"
                           required={!editingUserId}
-                          placeholder={editingUserId ? 'পরিবর্তন না করতে চাইলে খালি রাখুন' : 'কমপক্ষে ৪ অক্ষরের পাসওয়ার্ড'}
+                          placeholder={editingUserId ? 'Leave blank to keep current password' : 'Min. 4 characters'}
                           value={userFormData.password || ''}
                           onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
                         />
                       </div>
 
                       <div className="form-group">
-                        <label>ইউজারের ভূমিকা (Role) *</label>
+                        <label>System Role *</label>
                         <select
                           value={userFormData.role}
                           onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value as any })}
                         >
-                          <option value="sub_admin">সাব-এডমিন / মডারেটর (কাস্টম পারমিশন)</option>
-                          <option value="super_admin">সুপার এডমিন (পূর্ণ এক্সেস)</option>
+                          <option value="sub_admin">Sub-Admin / Moderator (Custom Permissions)</option>
+                          <option value="super_admin">Super Admin (Full Access)</option>
                         </select>
                       </div>
 
                       <div className="form-group full">
-                        <label>একাউন্ট স্ট্যাটাস</label>
+                        <label>Account Status</label>
                         <select
                           value={userFormData.isActive !== false ? 'active' : 'inactive'}
                           onChange={(e) => setUserFormData({ ...userFormData, isActive: e.target.value === 'active' })}
                         >
-                          <option value="active">সক্রিয় (Active - লগইন করতে পারবে)</option>
-                          <option value="inactive">নিষ্ক্রিয় (Inactive - সাময়িক ব্লক)</option>
+                          <option value="active">Active (Can log in)</option>
+                          <option value="inactive">Inactive (Temporarily suspended)</option>
                         </select>
                       </div>
 
@@ -5510,7 +5510,7 @@ export default function AdminPage() {
                       <div className="form-group full" style={{ marginTop: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                           <label style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>
-                            মডিউলভিত্তিক এক্সেস পারমিশনসমূহ (টিক দিন) *
+                            Module Access Permissions (Check to assign) *
                           </label>
 
                           {userFormData.role !== 'super_admin' && (
@@ -5529,7 +5529,7 @@ export default function AdminPage() {
                                   cursor: 'pointer',
                                 }}
                               >
-                                সব সিলেক্ট করুন
+                                Select All
                               </button>
                               <button
                                 type="button"
@@ -5545,7 +5545,7 @@ export default function AdminPage() {
                                   cursor: 'pointer',
                                 }}
                               >
-                                ক্লিয়ার করুন
+                                Clear All
                               </button>
                             </div>
                           )}
@@ -5554,7 +5554,7 @@ export default function AdminPage() {
                         {userFormData.role === 'super_admin' ? (
                           <div style={{ padding: '14px', background: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '0.88rem', fontWeight: 600 }}>
                             <ShieldCheck size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
-                            সুপার এডমিন রোল নির্বাচিত থাকায় এই ইউজার স্বয়ংক্রিয়ভাবে সবকটি মডিউলে পূর্ণ এক্সেস পাবেন।
+                            Super Admin role has full, unrestricted access to all system modules automatically.
                           </div>
                         ) : (
                           <div className="perm-checkbox-grid">
@@ -5609,7 +5609,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        {savingUser ? 'সংরক্ষণ হচ্ছে...' : editingUserId ? 'আপডেট সম্পন্ন করুন' : 'ইউজার সংরক্ষণ করুন'}
+                        {savingUser ? 'Saving...' : editingUserId ? 'Update User' : 'Save User'}
                       </button>
                       <button
                         type="button"
@@ -5624,7 +5624,7 @@ export default function AdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        বাতিল
+                        Cancel
                       </button>
                     </div>
                   </form>

@@ -3,45 +3,27 @@ import { isConfigured, getSql, ensureTablesExist } from '@/lib/db';
 import { verifyAdminRequest } from '@/lib/auth';
 import { ApiResponse } from '@/lib/types';
 
-const BENGALI_MONTHS = [
-  'জানুয়ারি',
-  'ফেব্রুয়ারি',
-  'মার্চ',
-  'এপ্রিল',
-  'মে',
-  'জুন',
-  'জুলাই',
-  'আগস্ট',
-  'সেপ্টেম্বর',
-  'অক্টোবর',
-  'নভেম্বর',
-  'ডিসেম্বর',
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
-
-const BENGALI_DIGITS: Record<string, string> = {
-  '0': '০',
-  '1': '১',
-  '2': '২',
-  '3': '৩',
-  '4': '৪',
-  '5': '৫',
-  '6': '৬',
-  '7': '৭',
-  '8': '৮',
-  '9': '৯',
-};
-
-function toBengaliNumber(num: number | string): string {
-  return String(num).replace(/\d/g, (d) => BENGALI_DIGITS[d] || d);
-}
 
 function getFormattedMonthTitle(monthStr: string): string {
   // monthStr is expected as "YYYY-MM"
   const [yearStr, mStr] = monthStr.split('-');
   const monthIdx = parseInt(mStr, 10) - 1;
-  const monthName = BENGALI_MONTHS[monthIdx] || mStr;
-  const yearBn = toBengaliNumber(yearStr);
-  return `মাসিক চাঁদা - ${monthName} ${yearBn}`;
+  const monthName = MONTH_NAMES[monthIdx] || mStr;
+  return `Monthly Fee - ${monthName} ${yearStr}`;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>> {
@@ -81,7 +63,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
       if (members.length === 0) {
         return NextResponse.json({
           success: true,
-          message: 'কোনো মেম্বারের মাসিক চাঁদা (Monthly Fee) সেট করা নেই। মেম্বার এডিট করে চাঁদার পরিমাণ নির্ধারণ করুন।',
+          message: 'No members have a monthly fee set. Please edit member profiles to set their monthly fee amount.',
           data: { generatedCount: 0, skippedCount: 0, total: 0 },
         });
       }
@@ -101,7 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
       if (membersToCreate.length === 0) {
         return NextResponse.json({
           success: true,
-          message: `এই মাসের (${dueTitle}) সকল মেম্বারের চাঁদার ডিউ ইতিমধ্যে তৈরি করা আছে। নতুন কোনো ডিউ যোগ করার প্রয়োজন নেই।`,
+          message: `Monthly dues for ${dueTitle} have already been generated for all eligible members.`,
           data: { generatedCount: 0, skippedCount: members.length, total: members.length },
         });
       }
@@ -121,7 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 
       return NextResponse.json({
         success: true,
-        message: `${generatedCount} জন মেম্বারের জন্য "${dueTitle}" সফলভাবে জেনারেট করা হয়েছে।`,
+        message: `Successfully generated "${dueTitle}" for ${generatedCount} member(s).`,
         data: {
           generatedCount,
           skippedCount: existingMemberIdSet.size,
@@ -133,7 +115,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 
     return NextResponse.json({
       success: true,
-      message: 'মাসিক চাঁদা জেনারেট সম্পন্ন হয়েছে (লোকাল মোড)',
+      message: 'Monthly dues generated successfully (Local mode)',
       data: { generatedCount: 1, skippedCount: 0, total: 1 },
     });
   } catch (err: any) {
@@ -141,10 +123,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     return NextResponse.json(
       {
         success: false,
-        message: 'মাসিক চাঁদা জেনারেট করতে সমস্যা হয়েছে।',
+        message: 'Failed to generate monthly dues.',
         error: err?.message || 'Unknown error',
       },
       { status: 500 }
     );
   }
 }
+
