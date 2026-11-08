@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import ImageCropModal from '@/components/ImageCropModal';
 import DonateCardModal from '@/components/DonateCardModal';
+import DonateCardPreviewBox from '@/components/DonateCardPreviewBox';
 import { compressImage } from '@/lib/image-compress';
 import {
   Donor,
@@ -84,6 +85,7 @@ import {
 type AdminTab =
   | 'adminDonors'
   | 'adminDonations'
+  | 'adminPhotoCards'
   | 'adminMembers'
   | 'adminDues'
   | 'adminCertificates'
@@ -203,6 +205,13 @@ export default function AdminPage() {
     image?: string | null;
   } | null>(null);
   const [lastSavedDonation, setLastSavedDonation] = useState<Donation | null>(null);
+  const [selectedPhotoCardDonationId, setSelectedPhotoCardDonationId] = useState<string | number | ''>('');
+  const [photoCardSearch, setPhotoCardSearch] = useState<string>('');
+
+  const selectedPhotoCardDonation =
+    donations.find((d) => String(d.id) === String(selectedPhotoCardDonationId)) ||
+    donations[0] ||
+    null;
 
   // Member Form state
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
@@ -1406,6 +1415,7 @@ export default function AdminPage() {
       items: [
         { id: 'adminDonors', label: 'Donors Directory', icon: Users, count: donors.length, perm: 'donors' },
         { id: 'adminDonations', label: 'Donation Records', icon: FileText, count: donations.length, perm: 'donations' },
+        { id: 'adminPhotoCards', label: 'Photo Cards (ফটোকার্ড)', icon: Sparkles, count: donations.length, perm: 'donations' },
         { id: 'adminMembers', label: 'Members & Committee', icon: UserCheck, count: members.length, perm: 'members' },
         {
           id: 'adminDues',
@@ -2583,8 +2593,9 @@ export default function AdminPage() {
         {/* TAB 2: DONATIONS MANAGEMENT */}
         {/* ========================================================================= */}
         {activeTab === 'adminDonations' && (
-          <div className="admin-tab-two-col">
-            {/* Add Donation Form */}
+          <div>
+            <div className="admin-tab-two-col">
+              {/* Add Donation Form */}
             <div className="admin-card" style={{ padding: '24px' }}>
               <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
                 {editingDonationId ? 'Edit Donation Record' : 'Record New Blood Donation'}
@@ -2880,10 +2891,9 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div className="form-group full">
-                    <label>Donor Address *</label>
+                    <label>Donor Address (Optional)</label>
                     <input
                       type="text"
-                      required
                       placeholder="Village/Area, Chapainawabganj"
                       value={donationForm.donorAddress}
                       onChange={(e) => setDonationForm({ ...donationForm, donorAddress: e.target.value })}
@@ -2952,113 +2962,407 @@ export default function AdminPage() {
               </form>
             </div>
 
-            {/* Donation Records List */}
-            <div className="admin-card" style={{ padding: '24px' }}>
-              <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
-                Donation History ({donations.length} Records)
-              </h3>
+            {/* Right: Live Photo Card Preview */}
+            <DonateCardPreviewBox
+              cardData={{
+                image: donationForm.image,
+                date: donationForm.date,
+                number: donationForm.number,
+                donorName: donationForm.donorName,
+                bloodGroup: donationForm.bloodGroup,
+              }}
+              onUploadPhotoClick={() => {
+                const input = document.getElementById('donation-photo-file-input') as HTMLInputElement | null;
+                input?.click();
+              }}
+            />
+          </div>
 
-              <div style={{ maxHeight: '640px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {donations.map((d) => (
-                  <div
-                    key={d.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '14px',
-                      borderRadius: '12px',
-                      background: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      transition: 'all 0.2s ease',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    {d.image ? (
-                      <img
-                        src={d.image}
-                        alt={d.donorName}
-                        style={{ width: '50px', height: '50px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
-                      />
-                    ) : (
-                      <div
+          {/* Donation Records List (Full Width Below) */}
+          <div className="admin-card" style={{ marginTop: '24px', padding: '24px' }}>
+            <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
+              Donation History ({donations.length} Records)
+            </h3>
+
+            <div style={{ maxHeight: '640px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {donations.map((d) => (
+                <div
+                  key={d.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    transition: 'all 0.2s ease',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {d.image ? (
+                    <img
+                      src={d.image}
+                      alt={d.donorName}
+                      style={{ width: '50px', height: '50px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '10px',
+                        background: '#fee2e2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#dc2626',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <FileText size={20} />
+                    </div>
+                  )}
+                  <div style={{ flex: '1 1 180px', minWidth: '150px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{d.donorName}</span>
+                      <span
                         style={{
-                          width: '50px',
-                          height: '50px',
-                          borderRadius: '10px',
+                          fontSize: '0.75rem',
+                          padding: '2px 6px',
                           background: '#fee2e2',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#dc2626',
-                          flexShrink: 0,
+                          color: '#991b1b',
+                          borderRadius: '6px',
+                          fontWeight: 800,
                         }}
                       >
-                        <FileText size={20} />
-                      </div>
-                    )}
-                    <div style={{ flex: '1 1 180px', minWidth: '150px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{d.donorName}</span>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            padding: '2px 6px',
-                            background: '#fee2e2',
-                            color: '#991b1b',
-                            borderRadius: '6px',
-                            fontWeight: 800,
-                          }}
-                        >
-                          {d.bloodGroup}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
-                        Date: {d.date} | ID: {d.number}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {d.donorAddress}
-                      </div>
+                        {d.bloodGroup}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => setCardModalData(d)}
-                        type="button"
-                        className="admin-btn-action admin-btn-card"
-                        title="ফটোকার্ড প্রিভিউ ও ডাউনলোড"
-                      >
-                        <ImageIcon size={13} />
-                        <span>Card</span>
-                      </button>
-                      <button
-                        onClick={() => handleEditDonation(d)}
-                        type="button"
-                        className="admin-btn-action admin-btn-edit"
-                        title="Edit donation record"
-                      >
-                        <Edit2 size={13} />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteDonation(d.id)}
-                        type="button"
-                        className="admin-btn-action admin-btn-delete"
-                        title="Delete donation record"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
+                      Date: {d.date} | ID: {d.number}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {d.donorAddress}
                     </div>
                   </div>
-                ))}
-                {donations.length === 0 && (
-                  <p style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    No donation records found.
-                  </p>
-                )}
-              </div>
+                  <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setCardModalData(d)}
+                      type="button"
+                      className="admin-btn-action admin-btn-card"
+                      title="ফটোকার্ড প্রিভিউ ও ডাউনলোড"
+                    >
+                      <ImageIcon size={13} />
+                      <span>Card</span>
+                    </button>
+                    <button
+                      onClick={() => handleEditDonation(d)}
+                      type="button"
+                      className="admin-btn-action admin-btn-edit"
+                      title="Edit donation record"
+                    >
+                      <Edit2 size={13} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDonation(d.id)}
+                      type="button"
+                      className="admin-btn-action admin-btn-delete"
+                      title="Delete donation record"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {donations.length === 0 && (
+                <p style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  No donation records found.
+                </p>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: PHOTO CARDS STUDIO */}
+      {/* ========================================================================= */}
+      {activeTab === 'adminPhotoCards' && (
+        <div>
+          <div className="admin-tab-two-col">
+            {/* Left Column: Select Donation & Details */}
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#dc2626',
+                  }}
+                >
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: 800 }}>
+                    ফটোকার্ড গ্যালারি ও জেনারেটর
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                    ডোনেশন নির্বাচন করে অফিসিয়াল ফটোকার্ড ডাউনলোড করুন
+                  </p>
+                </div>
+              </div>
+
+              {/* Donation Select Dropdown */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  ডোনেশন রেকর্ড নির্বাচন করুন *
+                </label>
+                <select
+                  value={selectedPhotoCardDonation?.id || ''}
+                  onChange={(e) => setSelectedPhotoCardDonationId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    color: '#0f172a',
+                  }}
+                >
+                  {donations.length === 0 && <option value="">কোনো ডোনেশন রেকর্ড পাওয়া যায়নি</option>}
+                  {donations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.donorName} ({d.bloodGroup}) — আইডি: {d.number} | {d.date}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search / Filter box */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                  নাম বা আইডি দিয়ে দ্রুত খুঁজুন
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Search
+                    size={15}
+                    style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="e.g. 3800 or Hisam..."
+                    value={photoCardSearch}
+                    onChange={(e) => setPhotoCardSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px 9px 36px',
+                      borderRadius: '9px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '0.85rem',
+                      background: '#ffffff',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Quick Selection List */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>
+                  ডোনেশন তালিকা ({donations.filter((d) => !photoCardSearch || d.donorName.toLowerCase().includes(photoCardSearch.toLowerCase()) || String(d.number).includes(photoCardSearch)).length} টি)
+                </label>
+                <div
+                  style={{
+                    maxHeight: '320px',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    paddingRight: '4px',
+                  }}
+                >
+                  {donations
+                    .filter(
+                      (d) =>
+                        !photoCardSearch ||
+                        d.donorName.toLowerCase().includes(photoCardSearch.toLowerCase()) ||
+                        String(d.number).includes(photoCardSearch)
+                    )
+                    .map((d) => {
+                      const isSelected = String(d.id) === String(selectedPhotoCardDonation?.id);
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => setSelectedPhotoCardDonationId(d.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            border: `1.5px solid ${isSelected ? '#dc2626' : '#e2e8f0'}`,
+                            background: isSelected ? '#fef2f2' : '#ffffff',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {d.image ? (
+                            <img
+                              src={d.image}
+                              alt={d.donorName}
+                              style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '8px',
+                                background: '#fee2e2',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#dc2626',
+                              }}
+                            >
+                              <FileText size={18} />
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.88rem', color: isSelected ? '#991b1b' : '#0f172a' }}>
+                                {d.donorName}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  padding: '1px 5px',
+                                  background: '#fee2e2',
+                                  color: '#991b1b',
+                                  borderRadius: '4px',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {d.bloodGroup}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              ID: {d.number} | {d.date}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <span
+                              style={{
+                                background: '#dc2626',
+                                color: '#ffffff',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                              }}
+                            >
+                              Selected
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Selected Details & Change Photo */}
+              {selectedPhotoCardDonation && (
+                <div
+                  style={{
+                    padding: '12px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+                      নির্বাচিত রক্তদাতা: {selectedPhotoCardDonation.donorName} ({selectedPhotoCardDonation.bloodGroup})
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                      তারিখ: {selectedPhotoCardDonation.date} | ডোনেট আইডি: {selectedPhotoCardDonation.number}
+                    </div>
+                  </div>
+                  {selectedPhotoCardDonation.image && (
+                    <button
+                      type="button"
+                      onClick={() => setCropModalImg(selectedPhotoCardDonation.image!)}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <Crop size={13} />
+                      <span>ছবি ক্রপ / এডজাস্ট</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Live Photo Card Preview & Download */}
+            <div>
+              {selectedPhotoCardDonation ? (
+                <DonateCardPreviewBox
+                  cardData={{
+                    image: selectedPhotoCardDonation.image,
+                    date: selectedPhotoCardDonation.date,
+                    number: selectedPhotoCardDonation.number,
+                    donorName: selectedPhotoCardDonation.donorName,
+                    bloodGroup: selectedPhotoCardDonation.bloodGroup,
+                  }}
+                  title={`ফটোকার্ড: ${selectedPhotoCardDonation.donorName}`}
+                  subtitle={`ডোনেট আইডি: ${selectedPhotoCardDonation.number} | তারিখ: ${selectedPhotoCardDonation.date}`}
+                />
+              ) : (
+                <div
+                  className="admin-card"
+                  style={{
+                    padding: '60px 24px',
+                    textAlign: 'center',
+                    color: '#64748b',
+                  }}
+                >
+                  <Sparkles size={40} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                  <h4 style={{ margin: '0 0 6px', color: '#334155', fontSize: '1.05rem', fontWeight: 700 }}>
+                    কোনো ডোনেশন রেকর্ড পাওয়া যায়নি
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>
+                    প্রথমে রক্তদান রেকর্ড সংরক্ষণ করুন, এরপর এখান থেকে ফটোকার্ড জেনারেট ও ডাউনলোড করতে পারবেন।
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* ========================================================================= */}
         {/* TAB 3: MEMBERS & COMMITTEE MANAGEMENT */}

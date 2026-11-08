@@ -68,11 +68,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
     const body = (await req.json().catch(() => ({}))) as DonationInput;
     const { donorName, donorPhone, donorAddress, number, bloodGroup, date, image, notes } = body;
 
-    if (!donorName || !donorPhone || !donorAddress || !number || !bloodGroup || !date) {
+    if (!donorName || !donorPhone || !number || !bloodGroup || !date) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Donor name, phone, address, donation number, blood group, and date are required.',
+          message: 'Donor name, phone, donation number, blood group, and date are required.',
         },
         { status: 400 }
       );
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
     const normalizedPhone = normalizePhone(donorPhone);
     const formattedBloodGroup = bloodGroup.trim().toUpperCase();
     const cleanDonorName = sanitizeText(donorName);
-    const cleanDonorAddress = sanitizeText(donorAddress);
+    const cleanDonorAddress = donorAddress ? sanitizeText(donorAddress) : '';
     const cleanNumber = sanitizeText(number);
 
     if (!validateBloodGroup(formattedBloodGroup)) {

@@ -24,9 +24,9 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     const body = await req.json().catch(() => ({}));
     const { donorName, donorPhone, donorAddress, number, bloodGroup, date, image, notes } = body;
 
-    if (!donorName || !donorPhone || !donorAddress || !number || !bloodGroup || !date) {
+    if (!donorName || !donorPhone || !number || !bloodGroup || !date) {
       return NextResponse.json(
-        { success: false, message: 'All donation details are required.' },
+        { success: false, message: 'Donor name, phone, donation number, blood group, and date are required.' },
         { status: 400 }
       );
     }
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     const normalizedPhone = normalizePhone(donorPhone);
     const formattedBloodGroup = bloodGroup.trim().toUpperCase();
     const cleanDonorName = sanitizeText(donorName);
-    const cleanDonorAddress = sanitizeText(donorAddress);
+    const cleanDonorAddress = donorAddress ? sanitizeText(donorAddress) : '';
     const cleanNumber = sanitizeText(number);
     const idStr = String(id).trim();
 
