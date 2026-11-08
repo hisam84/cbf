@@ -20,15 +20,15 @@ export default function DonateCardPreviewBox({
 }: DonateCardPreviewBoxProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [useBengaliDigits, setUseBengaliDigits] = useState(false);
-  const [showDonorInfo, setShowDonorInfo] = useState(false);
+  const [showDonorInfo, setShowDonorInfo] = useState(true);
   const [isRendering, setIsRendering] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
   const fullData: DonateCardData = {
     ...cardData,
+    donorName: showDonorInfo ? cardData.donorName : undefined,
     useBengaliDigits,
-    showDonorInfo,
     orgName: 'চাঁভালি রক্ত ফাউন্ডেশন',
     slogan: 'রক্তের বন্ধনে, চাঁভালি সবখানে',
   };

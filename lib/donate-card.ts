@@ -12,6 +12,8 @@ export interface DonateCardData {
   donorName?: string;
   bloodGroup?: string;
   showDonorInfo?: boolean;
+  showDonorName?: boolean;
+  showBloodBadge?: boolean;
   useBengaliDigits?: boolean;
   orgName?: string;
   slogan?: string;
@@ -102,11 +104,37 @@ export async function drawDonateCardToCanvas(
     drawFallbackBackground(ctx, WIDTH, HEIGHT);
   }
 
+  // 1b. Cinematic Vignette Gradients for Contrast & Pop
+  // Top Vignette (makes logo & top badge stand out regardless of photo background)
+  const topVignette = ctx.createLinearGradient(0, 0, 0, 240);
+  topVignette.addColorStop(0, 'rgba(0, 0, 0, 0.65)');
+  topVignette.addColorStop(0.5, 'rgba(0, 0, 0, 0.28)');
+  topVignette.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = topVignette;
+  ctx.fillRect(0, 0, WIDTH, 240);
+
+  // Bottom Vignette (smoothly fades photo into footer banner)
+  const bottomVignette = ctx.createLinearGradient(0, 740, 0, 943);
+  bottomVignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  bottomVignette.addColorStop(0.6, 'rgba(0, 0, 0, 0.35)');
+  bottomVignette.addColorStop(1, 'rgba(0, 0, 0, 0.65)');
+  ctx.fillStyle = bottomVignette;
+  ctx.fillRect(0, 740, WIDTH, 203);
+
   // 2. Draw Top-Left CBF Logo & White Circle
   // Circle cx = 115.24, cy = 122.27, r = 67.8
   ctx.save();
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
-  ctx.shadowBlur = 12;
+  // Outer glowing ring
+  ctx.shadowColor = 'rgba(220, 38, 38, 0.45)';
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.beginPath();
+  ctx.arc(115.24, 122.27, 72, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main white circle
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.38)';
+  ctx.shadowBlur = 14;
   ctx.shadowOffsetY = 4;
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
@@ -120,7 +148,6 @@ export async function drawDonateCardToCanvas(
     // Diameter is ~135.6, draw logo at 126x126 centered at (115.24, 122.27)
     ctx.drawImage(logoImg, 115.24 - 63, 122.27 - 63, 126, 126);
   } catch {
-    // Fallback logo placeholder if file not reachable
     ctx.fillStyle = '#dc2626';
     ctx.font = 'bold 32px "Noto Sans Bengali", sans-serif';
     ctx.textAlign = 'center';
@@ -128,42 +155,103 @@ export async function drawDonateCardToCanvas(
     ctx.fillText('CBF', 115.24, 122.27);
   }
 
-  // 3. Draw Optional Donor Badge (Top Right)
-  if (data.showDonorInfo && data.donorName) {
+  // 3. Top-Right Blood Group & Noble Donor Badge (NEW & OPTIMIZED!)
+  if (data.bloodGroup) {
     ctx.save();
-    const donorText = `${data.donorName}${data.bloodGroup ? ` (${data.bloodGroup})` : ''}`;
-    ctx.font = 'bold 28px "Noto Sans Bengali", sans-serif';
-    const textWidth = ctx.measureText(donorText).width;
-    const badgeW = textWidth + 50;
-    const badgeH = 50;
+    const bgText = String(data.bloodGroup).trim();
+    const badgeW = 210;
+    const badgeH = 76;
     const badgeX = WIDTH - badgeW - 35;
-    const badgeY = 60;
+    const badgeY = 84;
 
-    // Semi-transparent dark frosted pill
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    // Glowing Pill Shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 5;
+
+    // Gradient Pill Background
+    const pillGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
+    pillGrad.addColorStop(0, '#991B1B');
+    pillGrad.addColorStop(0.5, '#DC2626');
+    pillGrad.addColorStop(1, '#991B1B');
+
+    ctx.fillStyle = pillGrad;
     ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 25);
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 18);
     ctx.fill();
 
-    // Red dot indicator
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath();
-    ctx.arc(badgeX + 22, badgeY + badgeH / 2, 7, 0, Math.PI * 2);
-    ctx.fill();
+    // Golden / White Frosted Border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    // Text
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(donorText, badgeX + 38, badgeY + badgeH / 2);
+    // Reset shadow for text
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+
+    // Blood Drop / Heart symbol + Blood Group
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 36px "Noto Sans Bengali", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(`🩸 ${bgText}`, badgeX + badgeW / 2, badgeY + 40);
+
+    // Sub-text: "স্বেচ্ছায় রক্তদান"
+    ctx.font = '600 18px "Noto Sans Bengali", sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillText('স্বেচ্ছায় রক্তদান', badgeX + badgeW / 2, badgeY + 64);
     ctx.restore();
   }
 
-  // 4. Date Ribbon (Red Fade Gradient)
-  // y = 651.63, height = 58.2
+  // 4. Left-Side Information Ribbons
+  // If donorName is present, we draw 3 ribbons: Donor Name, Date, and Donate No.
+  const hasDonorName = Boolean(data.donorName && data.donorName.trim() !== '');
+
+  // Positions:
+  // With Donor Name: Donor at y=583, Date at y=651.63, Number at y=719.23
+  // Without Donor Name: Date at y=651.63, Number at y=719.23
   const dateStr = formatCardDate(data.date, !!data.useBengaliDigits);
   const dateFullText = `তারিখ: ${dateStr}`;
 
+  const numStr = data.useBengaliDigits ? toBengali(data.number) : data.number;
+  const numFullText = `ডোনেট নং: ${numStr || ''}`;
+
+  // 4a. DONOR NAME RIBBON (NEW & HIGHLIGHTED!)
+  if (hasDonorName) {
+    const donorFullText = `রক্তদাতা: ${data.donorName}`;
+    ctx.save();
+    ctx.font = 'bold 34px "Noto Sans Bengali", sans-serif';
+    const donorTextWidth = ctx.measureText(donorFullText).width;
+    const donorRibbonWidth = Math.max(420, donorTextWidth + 85);
+
+    // Royal Deep Burgundy/Red Gradient
+    const gradDonor = ctx.createLinearGradient(0, 612, donorRibbonWidth, 612);
+    gradDonor.addColorStop(0, '#7F1D1D');
+    gradDonor.addColorStop(0.35, 'rgba(153, 27, 27, 0.96)');
+    gradDonor.addColorStop(0.7, 'rgba(185, 28, 28, 0.65)');
+    gradDonor.addColorStop(0.9, 'rgba(220, 38, 38, 0.25)');
+    gradDonor.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gradDonor;
+    ctx.fillRect(0, 583, donorRibbonWidth, 58.2);
+
+    // Accent line at top of donor ribbon
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(0, 583, donorRibbonWidth * 0.85, 1.5);
+
+    // Donor Text
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(donorFullText, 24, 623);
+    ctx.restore();
+  }
+
+  // 4b. DATE RIBBON
   ctx.save();
   ctx.font = 'bold 34px "Noto Sans Bengali", sans-serif';
   const dateTextWidth = ctx.measureText(dateFullText).width;
@@ -190,11 +278,7 @@ export async function drawDonateCardToCanvas(
   ctx.fillText(dateFullText, 24, 691.5);
   ctx.restore();
 
-  // 5. Donation Number Ribbon (Green Fade Gradient)
-  // y = 719.23, height = 58.2
-  const numStr = data.useBengaliDigits ? toBengali(data.number) : data.number;
-  const numFullText = `ডোনেট নং: ${numStr || ''}`;
-
+  // 4c. DONATION NUMBER RIBBON
   ctx.save();
   ctx.font = 'bold 34px "Noto Sans Bengali", sans-serif';
   const numTextWidth = ctx.measureText(numFullText).width;
@@ -221,56 +305,89 @@ export async function drawDonateCardToCanvas(
   ctx.fillText(numFullText, 24, 760);
   ctx.restore();
 
-  // 6. Bottom Banner
+  // 5. Bottom Foundation Banner (REDESIGNED & ELEVATED!)
   // Green base rect y = 942.29, height = 240.71
   ctx.fillStyle = '#009444';
   ctx.fillRect(0, 942.29, WIDTH, 241);
 
+  // Glowing Green/Gold Highlight Hairline
+  ctx.fillStyle = '#22C55E';
+  ctx.fillRect(0, 942.29, WIDTH, 2);
+
   // Red gradient rect y = 947.76, height = 235.24 (revealing 5.47px green line at top)
   const gradBanner = ctx.createLinearGradient(0, 1065.2, WIDTH, 1065.2);
-  gradBanner.addColorStop(0, '#A4181C');
-  gradBanner.addColorStop(0.012, '#A7191D');
-  gradBanner.addColorStop(0.13, '#C31B21');
-  gradBanner.addColorStop(0.25, '#D71C23');
-  gradBanner.addColorStop(0.37, '#E61C24');
-  gradBanner.addColorStop(0.5, '#ED1C24');
-  gradBanner.addColorStop(0.63, '#E61C24');
-  gradBanner.addColorStop(0.75, '#D71C23');
-  gradBanner.addColorStop(0.87, '#C31B21');
-  gradBanner.addColorStop(1, '#A4181C');
+  gradBanner.addColorStop(0, '#7F1D1D');
+  gradBanner.addColorStop(0.015, '#991B1B');
+  gradBanner.addColorStop(0.15, '#B91C1C');
+  gradBanner.addColorStop(0.35, '#DC2626');
+  gradBanner.addColorStop(0.5, '#EF4444');
+  gradBanner.addColorStop(0.65, '#DC2626');
+  gradBanner.addColorStop(0.85, '#B91C1C');
+  gradBanner.addColorStop(0.985, '#991B1B');
+  gradBanner.addColorStop(1, '#7F1D1D');
 
   ctx.fillStyle = gradBanner;
   ctx.fillRect(0, 947.76, WIDTH, 235.24);
 
-  // 7. Organization Title Text
+  // Radial illumination in banner center for depth
+  const radGlow = ctx.createRadialGradient(WIDTH / 2, 1070, 20, WIDTH / 2, 1070, 480);
+  radGlow.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+  radGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = radGlow;
+  ctx.fillRect(0, 947.76, WIDTH, 235.24);
+
+  // 6. Organization Title Text
   const orgName = data.orgName || 'চাঁভালি রক্ত ফাউন্ডেশন';
   ctx.save();
   ctx.font = 'bold 84px "Noto Sans Bengali", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#FFFFFF';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 2;
-  ctx.fillText(orgName, WIDTH / 2, 1070);
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  ctx.fillText(orgName, WIDTH / 2, 1068);
   ctx.restore();
 
-  // 8. Divider Line
-  // x = 201.72, y = 1087.69, width = 676.57, height = 4.62
-  const gradLine = ctx.createLinearGradient(201.72, 1089.99, 878.28, 1089.99);
-  gradLine.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+  // 7. Divider Line with Center Diamond Emblem
+  const gradLine = ctx.createLinearGradient(180, 1089.99, 900, 1089.99);
+  gradLine.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+  gradLine.addColorStop(0.42, 'rgba(255, 255, 255, 0.15)');
   gradLine.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
-  gradLine.addColorStop(1, 'rgba(255, 255, 255, 0.35)');
+  gradLine.addColorStop(0.58, 'rgba(255, 255, 255, 0.15)');
+  gradLine.addColorStop(1, 'rgba(255, 255, 255, 0.45)');
 
   ctx.fillStyle = gradLine;
-  ctx.fillRect(201.72, 1087.69, 676.57, 4.62);
+  ctx.fillRect(180, 1087.69, 720, 3.5);
 
-  // 9. Slogan Text
+  // Center Emblem: Diamond ❖
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('❖', WIDTH / 2, 1089);
+  ctx.restore();
+
+  // 8. Slogan Text
   const slogan = data.slogan || 'রক্তের বন্ধনে, চাঁভালি সবখানে';
   ctx.save();
   ctx.font = 'bold 46px "Noto Sans Bengali", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+  ctx.shadowBlur = 5;
+  ctx.shadowOffsetY = 2;
+  ctx.fillText(slogan, WIDTH / 2, 1142);
+  ctx.restore();
+
+  // 9. Premium Inset Border Framing
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(12, 12, WIDTH - 24, HEIGHT - 24);
+  ctx.restore();
   ctx.fillStyle = '#FFFFFF';
   ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
   ctx.shadowBlur = 5;

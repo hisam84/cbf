@@ -6351,6 +6351,8 @@ export default function AdminPage() {
             imageSrc={cropModalImg}
             sampleDate={donationForm.date || new Date().toISOString().split('T')[0]}
             sampleNumber={donationForm.number || '3800'}
+            sampleDonorName={donationForm.donorName}
+            sampleBloodGroup={donationForm.bloodGroup}
             onCrop={handleCropComplete}
             onClose={() => setCropModalImg(null)}
           />

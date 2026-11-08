@@ -10,6 +10,8 @@ interface ImageCropModalProps {
   aspectRatio?: number; // width / height, defaults to 1080 / 1182.6 = 0.91324
   sampleDate?: string;
   sampleNumber?: string;
+  sampleDonorName?: string;
+  sampleBloodGroup?: string;
 }
 
 export default function ImageCropModal({
@@ -19,6 +21,8 @@ export default function ImageCropModal({
   aspectRatio = 1080 / 1182.6,
   sampleDate = new Date().toISOString().split('T')[0],
   sampleNumber = '3800',
+  sampleDonorName,
+  sampleBloodGroup,
 }: ImageCropModalProps) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -287,7 +291,7 @@ export default function ImageCropModal({
                   justifyContent: 'space-between',
                 }}
               >
-                {/* Top Header Overlay: Logo Circle & Badge */}
+                {/* Top Header Overlay: Logo Circle & Blood Group Badge */}
                 <div style={{ padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div
                     style={{
@@ -301,6 +305,7 @@ export default function ImageCropModal({
                       justifyContent: 'center',
                       overflow: 'hidden',
                       padding: '3px',
+                      border: '2px solid rgba(220, 38, 38, 0.4)',
                     }}
                   >
                     <img
@@ -315,22 +320,44 @@ export default function ImageCropModal({
 
                   <div
                     style={{
-                      background: 'rgba(15, 23, 42, 0.65)',
-                      backdropFilter: 'blur(4px)',
+                      background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
                       color: '#ffffff',
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                      padding: '3px 8px',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.2)',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.4)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                   >
-                    টেমপ্লেট প্রিভিউ
+                    <span>🩸 {sampleBloodGroup || 'O+'}</span>
+                    <span style={{ fontSize: '0.6rem', opacity: 0.9 }}>স্বেচ্ছায় রক্তদান</span>
                   </div>
                 </div>
 
-                {/* Middle Ribbons (Date & Serial) */}
-                <div style={{ marginTop: 'auto', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {/* Middle Ribbons (Donor Name, Date & Serial) */}
+                <div style={{ marginTop: 'auto', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {/* Donor Name ribbon (if provided) */}
+                  {sampleDonorName && (
+                    <div
+                      style={{
+                        background: 'linear-gradient(90deg, #7F1D1D 0%, rgba(153,27,27,0.92) 50%, rgba(255,255,255,0) 100%)',
+                        color: '#ffffff',
+                        padding: '3px 12px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        width: 'fit-content',
+                        minWidth: '170px',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+                        borderTop: '1px solid rgba(255,255,255,0.25)',
+                      }}
+                    >
+                      রক্তদাতা: {sampleDonorName}
+                    </div>
+                  )}
                   {/* Date ribbon */}
                   <div
                     style={{

@@ -18,7 +18,7 @@ interface DonateCardModalProps {
 export default function DonateCardModal({ donation, onClose }: DonateCardModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [useBengaliDigits, setUseBengaliDigits] = useState(false);
-  const [showDonorInfo, setShowDonorInfo] = useState(false);
+  const [showDonorInfo, setShowDonorInfo] = useState(true);
   const [isRendering, setIsRendering] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -27,7 +27,7 @@ export default function DonateCardModal({ donation, onClose }: DonateCardModalPr
     image: donation.image,
     date: donation.date,
     number: donation.number,
-    donorName: donation.donorName,
+    donorName: showDonorInfo ? donation.donorName : undefined,
     bloodGroup: donation.bloodGroup,
     showDonorInfo,
     useBengaliDigits,
