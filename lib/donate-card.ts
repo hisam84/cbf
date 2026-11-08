@@ -331,3 +331,37 @@ export async function downloadDonateCard(
   });
 }
 
+/**
+ * Automatically computes the next serial / donation ID from existing donation records.
+ * Supports pure numeric formats (e.g. 3747 -> 3748, 3800 -> 3801) as well as
+ * prefixed formats (e.g. CBF-2026-001 -> CBF-2026-002).
+ */
+export function getNextDonationNumber(donations: Array<{ number?: string | null }>): string {
+  if (!donations || donations.length === 0) return '3800';
+
+  let maxNum = -1;
+  let bestPrefix = '';
+  let bestPadLength = 0;
+
+  for (const d of donations) {
+    const str = String((d && d.number) || '').trim();
+    const match = str.match(/^(.*?)(\d+)$/);
+    if (match) {
+      const num = parseInt(match[2], 10);
+      if (num > maxNum) {
+        maxNum = num;
+        bestPrefix = match[1];
+        bestPadLength = match[2].length;
+      }
+    }
+  }
+
+  if (maxNum >= 0) {
+    const nextNum = maxNum + 1;
+    const padded = bestPadLength > 1 ? String(nextNum).padStart(bestPadLength, '0') : String(nextNum);
+    return bestPrefix + padded;
+  }
+
+  return '3800';
+}
+

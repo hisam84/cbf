@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ImageCropModal from '@/components/ImageCropModal';
 import DonateCardModal from '@/components/DonateCardModal';
 import DonateCardPreviewBox from '@/components/DonateCardPreviewBox';
+import { getNextDonationNumber } from '@/lib/donate-card';
 import { compressImage } from '@/lib/image-compress';
 import {
   Donor,
@@ -212,6 +213,20 @@ export default function AdminPage() {
     donations.find((d) => String(d.id) === String(selectedPhotoCardDonationId)) ||
     donations[0] ||
     null;
+
+  // Auto-suggested serial from highest existing donation number
+  const autoSuggestedSerial = getNextDonationNumber(donations);
+
+  // Automatically prefill donationForm.number with next suggested serial when starting a new record
+  useEffect(() => {
+    if (!editingDonationId && (!donationForm.number || donationForm.number.trim() === '')) {
+      const nextNo = getNextDonationNumber(donations);
+      setDonationForm((prev) => ({
+        ...prev,
+        number: prev.number && prev.number.trim() !== '' ? prev.number : nextNo,
+      }));
+    }
+  }, [donations, editingDonationId]);
 
   // Member Form state
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
@@ -1109,11 +1124,15 @@ export default function AdminPage() {
         }
         fetchAllData();
         setEditingDonationId(null);
+        const updatedList = editingDonationId
+          ? donations
+          : [data.data || { number: donationForm.number }, ...donations];
+        const nextSerial = getNextDonationNumber(updatedList);
         setDonationForm({
           donorName: '',
           donorPhone: '',
           donorAddress: '',
-          number: '',
+          number: nextSerial,
           bloodGroup: 'A+',
           date: new Date().toISOString().split('T')[0],
           image: null,
@@ -2694,11 +2713,38 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Donation ID / Serial No. *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: '#334155' }}>
+                        Donation ID / Serial No. *
+                      </label>
+                      {!editingDonationId && (
+                        <button
+                          type="button"
+                          onClick={() => setDonationForm((prev) => ({ ...prev, number: autoSuggestedSerial }))}
+                          style={{
+                            background: '#fee2e2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            padding: '2px 8px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            color: '#991b1b',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          title="অটো সাজেস্টেড সিরিয়াল নম্বর সেট করুন"
+                        >
+                          <Sparkles size={11} color="#dc2626" />
+                          <span>অটো সাজেস্ট: {autoSuggestedSerial}</span>
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. CBF-2026-001"
+                      placeholder={`e.g. ${autoSuggestedSerial}`}
                       value={donationForm.number}
                       onChange={(e) => setDonationForm({ ...donationForm, number: e.target.value })}
                     />
@@ -2938,7 +2984,7 @@ export default function AdminPage() {
                           donorName: '',
                           donorPhone: '',
                           donorAddress: '',
-                          number: '',
+                          number: autoSuggestedSerial,
                           bloodGroup: 'A+',
                           date: new Date().toISOString().split('T')[0],
                           image: null,
