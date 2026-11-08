@@ -6,7 +6,7 @@
 
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
-import { DbStatus } from './types';
+import { DbStatus, FacebookSettings, FacebookPostingMode } from './types';
 
 // Support all Vercel + Neon standard environment variable keys
 export function getDatabaseUrl(): string {
@@ -200,6 +200,15 @@ export async function ensureTablesExist(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_member_dues_billing_month ON member_dues(billing_month);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_member_dues_created_at ON member_dues(created_at DESC);`;
 
+    // 9. Key-Value Settings Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     // Seed initial admin if empty
     const defaultUser = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
     const defaultPass = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
@@ -276,3 +285,114 @@ export async function checkDbConnection(): Promise<DbStatus> {
     };
   }
 }
+
+// ------------------------------------------------------------------------------
+// Facebook Integration Settings Helpers
+// ------------------------------------------------------------------------------
+
+export const DEFAULT_FACEBOOK_SETTINGS: FacebookSettings = {
+  postingMode: 'both',
+  pageId: process.env.FB_PAGE_ID || '',
+  pageAccessToken: process.env.FB_PAGE_ACCESS_TOKEN || '',
+  groupUrl: process.env.FB_GROUP_URL || 'https://www.facebook.com/groups/chavalibloodfoundation',
+  captionTemplate: `মাশাআল্লাহ! রক্তদান মানবতার শ্রেষ্ঠ উপহার।🩸
+দাতার নাম: {name}
+রক্তের গ্রুপ: {bloodGroup}
+রক্তদানের সংখ্যা: {count}
+তারিখ: {date}
+চাঁভালি রক্ত ফাউন্ডেশনের পক্ষ থেকে রক্তদাতাকে আন্তরিক শুভেচ্ছা ও শুভকামনা।
+
+#ChavaliBloodFoundation #BloodDonation #DonateBloodSaveLife`,
+};
+
+// In-memory fallback if DB not configured yet
+let memorySettings: Record<string, string> = {};
+
+export async function getFacebookSettings(): Promise<FacebookSettings> {
+  const settings: FacebookSettings = { ...DEFAULT_FACEBOOK_SETTINGS };
+
+  if (isConfigured()) {
+    try {
+      await ensureTablesExist();
+      const sql = getSql();
+      if (sql) {
+        const rows = (await sql`
+          SELECT key, value FROM settings
+          WHERE key IN ('fb_posting_mode', 'fb_page_id', 'fb_page_access_token', 'fb_group_url', 'fb_caption_template');
+        `) as any[];
+
+        for (const row of rows) {
+          if (row.key === 'fb_posting_mode' && row.value) {
+            settings.postingMode = row.value as FacebookPostingMode;
+          } else if (row.key === 'fb_page_id' && row.value) {
+            settings.pageId = row.value;
+          } else if (row.key === 'fb_page_access_token' && row.value) {
+            settings.pageAccessToken = row.value;
+          } else if (row.key === 'fb_group_url' && row.value) {
+            settings.groupUrl = row.value;
+          } else if (row.key === 'fb_caption_template' && row.value) {
+            settings.captionTemplate = row.value;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load settings from DB, using fallback:', e);
+    }
+  } else {
+    if (memorySettings['fb_posting_mode']) settings.postingMode = memorySettings['fb_posting_mode'] as FacebookPostingMode;
+    if (memorySettings['fb_page_id']) settings.pageId = memorySettings['fb_page_id'];
+    if (memorySettings['fb_page_access_token']) settings.pageAccessToken = memorySettings['fb_page_access_token'];
+    if (memorySettings['fb_group_url']) settings.groupUrl = memorySettings['fb_group_url'];
+    if (memorySettings['fb_caption_template']) settings.captionTemplate = memorySettings['fb_caption_template'];
+  }
+
+  return settings;
+}
+
+export async function saveFacebookSettings(data: Partial<FacebookSettings>): Promise<FacebookSettings> {
+  const current = await getFacebookSettings();
+  const updated: FacebookSettings = {
+    postingMode: data.postingMode || current.postingMode,
+    pageId: data.pageId !== undefined ? data.pageId.trim() : current.pageId,
+    pageAccessToken: data.pageAccessToken !== undefined ? data.pageAccessToken.trim() : current.pageAccessToken,
+    groupUrl: data.groupUrl !== undefined ? data.groupUrl.trim() : current.groupUrl,
+    captionTemplate: data.captionTemplate !== undefined ? data.captionTemplate : current.captionTemplate,
+  };
+
+  if (isConfigured()) {
+    try {
+      await ensureTablesExist();
+      const sql = getSql();
+      if (sql) {
+        const pairs: [string, string][] = [
+          ['fb_posting_mode', updated.postingMode],
+          ['fb_page_id', updated.pageId],
+          ['fb_page_access_token', updated.pageAccessToken],
+          ['fb_group_url', updated.groupUrl],
+          ['fb_caption_template', updated.captionTemplate],
+        ];
+
+        for (const [key, value] of pairs) {
+          await sql`
+            INSERT INTO settings (key, value, updated_at)
+            VALUES (${key}, ${value}, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE
+            SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP;
+          `;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to save settings to DB:', e);
+      throw e;
+    }
+  } else {
+    memorySettings['fb_posting_mode'] = updated.postingMode;
+    memorySettings['fb_page_id'] = updated.pageId;
+    memorySettings['fb_page_access_token'] = updated.pageAccessToken;
+    memorySettings['fb_group_url'] = updated.groupUrl;
+    memorySettings['fb_caption_template'] = updated.captionTemplate;
+  }
+
+  return updated;
+}
+

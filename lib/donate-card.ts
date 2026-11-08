@@ -45,6 +45,40 @@ export function formatCardDate(dateStr: string, useBengaliDigits = false): strin
   return `${day} ${monthName} ${year}`;
 }
 
+export const DEFAULT_CAPTION_TEMPLATE = `মাশাআল্লাহ! রক্তদান মানবতার শ্রেষ্ঠ উপহার।🩸
+দাতার নাম: {name}
+রক্তের গ্রুপ: {bloodGroup}
+রক্তদানের সংখ্যা: {count}
+তারিখ: {date}
+চাঁভালি রক্ত ফাউন্ডেশনের পক্ষ থেকে রক্তদাতাকে আন্তরিক শুভেচ্ছা ও শুভকামনা।
+
+#ChavaliBloodFoundation #BloodDonation #DonateBloodSaveLife`;
+
+/**
+ * Generates formatted Bengali caption for Facebook post/share
+ */
+export function generateFacebookCaption(
+  template: string | undefined,
+  donation: {
+    donorName?: string;
+    bloodGroup?: string;
+    date: string;
+    number: string;
+  },
+  useBengaliDigits = false
+): string {
+  const tmpl = template || DEFAULT_CAPTION_TEMPLATE;
+  const formattedDate = formatCardDate(donation.date, useBengaliDigits);
+  const formattedCount = useBengaliDigits ? toBengali(donation.number) : donation.number;
+
+  return tmpl
+    .replace(/\{name\}/g, donation.donorName || 'সম্মানিত রক্তদাতা')
+    .replace(/\{bloodGroup\}/g, donation.bloodGroup || 'অজানা')
+    .replace(/\{count\}/g, formattedCount ? `${formattedCount} বার` : '')
+    .replace(/\{date\}/g, formattedDate)
+    .replace(/\{slogan\}/g, 'রক্তের বন্ধনে, চাঁভালি সবখানে');
+}
+
 /**
  * Preloads an image into an HTMLImageElement
  */

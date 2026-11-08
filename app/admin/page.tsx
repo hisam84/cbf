@@ -27,6 +27,7 @@ import {
   StatsData,
   DbStatus,
   VALID_BLOOD_GROUPS,
+  FacebookSettings,
 } from '@/lib/types';
 import { calculateEligibility } from '@/lib/validators';
 import {
@@ -81,6 +82,7 @@ import {
   UserCog,
   Crop,
   Sparkles,
+  Share2,
 } from 'lucide-react';
 
 type AdminTab =
@@ -336,6 +338,27 @@ export default function AdminPage() {
   const [pwdMsg, setPwdMsg] = useState<string | null>(null);
   const [savingPwd, setSavingPwd] = useState<boolean>(false);
 
+  // Facebook Integration settings state
+  const [fbForm, setFbForm] = useState<FacebookSettings>({
+    postingMode: 'both',
+    pageId: '',
+    pageAccessToken: '',
+    groupUrl: 'https://www.facebook.com/groups/chavalibloodfoundation',
+    captionTemplate: `মাশাআল্লাহ! রক্তদান মানবতার শ্রেষ্ঠ উপহার।🩸
+দাতার নাম: {name}
+রক্তের গ্রুপ: {bloodGroup}
+রক্তদানের সংখ্যা: {count}
+তারিখ: {date}
+চাঁভালি রক্ত ফাউন্ডেশনের পক্ষ থেকে রক্তদাতাকে আন্তরিক শুভেচ্ছা ও শুভকামনা।
+
+#ChavaliBloodFoundation #BloodDonation #DonateBloodSaveLife`,
+  });
+  const [savingFbForm, setSavingFbForm] = useState<boolean>(false);
+  const [testingFbConn, setTestingFbConn] = useState<boolean>(false);
+  const [fbTestMsg, setFbTestMsg] = useState<{ success: boolean; text: string } | null>(null);
+  const [fbSaveMsg, setFbSaveMsg] = useState<{ success: boolean; text: string } | null>(null);
+  const [showFbTokenInput, setShowFbTokenInput] = useState<boolean>(false);
+
   // 1. Initial auth check & cleanup of old localStorage tokens
   useEffect(() => {
     // Clean up any lingering token from older versions
@@ -517,6 +540,23 @@ export default function AdminPage() {
         })
         .then((d) => {
           if (d && d.success && Array.isArray(d.data)) setMessages(d.data);
+        })
+        .catch(() => {});
+
+      // 11. Facebook Settings (authorized)
+      fetch('/api/settings/facebook', { headers })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d && d.success && d.data) {
+            setFbForm((prev) => ({
+              ...prev,
+              postingMode: d.data.postingMode || prev.postingMode,
+              pageId: d.data.pageId || prev.pageId,
+              pageAccessToken: d.data.pageAccessToken || prev.pageAccessToken,
+              groupUrl: d.data.groupUrl || prev.groupUrl,
+              captionTemplate: d.data.captionTemplate || prev.captionTemplate,
+            }));
+          }
         })
         .catch(() => {});
     } finally {
@@ -1370,6 +1410,64 @@ export default function AdminPage() {
       setPwdMsg('Network error while updating password.');
     } finally {
       setSavingPwd(false);
+    }
+  };
+
+  const handleSaveFacebookSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingFbForm(true);
+    setFbSaveMsg(null);
+
+    try {
+      const res = await fetch('/api/settings/facebook', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(fbForm),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setFbSaveMsg({ success: true, text: data.message || 'ফেসবুক সেটিংস সফলভাবে সংরক্ষিত হয়েছে!' });
+        if (data.data) {
+          setFbForm((prev) => ({
+            ...prev,
+            ...data.data,
+          }));
+        }
+      } else {
+        setFbSaveMsg({ success: false, text: data.message || 'ফেসবুক সেটিংস সংরক্ষণে সমস্যা হয়েছে।' });
+      }
+    } catch (err: any) {
+      setFbSaveMsg({ success: false, text: 'সার্ভারে কানেক্ট করা যায়নি: ' + err.message });
+    } finally {
+      setSavingFbForm(false);
+    }
+  };
+
+  const handleTestFacebookConnection = async () => {
+    setTestingFbConn(true);
+    setFbTestMsg(null);
+
+    try {
+      const res = await fetch('/api/facebook/test-connection', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          pageId: fbForm.pageId,
+          pageAccessToken: fbForm.pageAccessToken,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setFbTestMsg({ success: true, text: data.message || 'কানেকশন সফল!' });
+      } else {
+        setFbTestMsg({ success: false, text: data.message || 'কানেকশন ব্যর্থ হয়েছে।' });
+      }
+    } catch (err: any) {
+      setFbTestMsg({ success: false, text: 'কানেকশন টেস্টে ত্রুটি: ' + err.message });
+    } finally {
+      setTestingFbConn(false);
     }
   };
 
@@ -6241,107 +6339,487 @@ export default function AdminPage() {
         {/* TAB 8: SETTINGS & PASSWORD */}
         {/* ========================================================================= */}
         {activeTab === 'adminSettings' && (
-          <div className="admin-card" style={{ padding: '24px' }}>
-            <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
-              Change Admin Password
-            </h3>
-
-            {pwdMsg && (
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  marginBottom: '18px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  color: '#0f172a',
-                }}
-              >
-                {pwdMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleChangePassword} style={{ maxWidth: '440px' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Current Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter current password"
-                  value={pwdForm.currentPassword}
-                  onChange={(e) => setPwdForm({ ...pwdForm, currentPassword: e.target.value })}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* 1. Facebook Integration & Auto-Post Settings */}
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div
                   style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: '#eff6ff',
+                    color: '#1877f2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
-                />
+                >
+                  <Share2 size={22} />
+                </div>
+                <div>
+                  <h3 style={{ color: '#0f172a', fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
+                    ফেসবুক অটো-পোস্ট ও গ্রুপ শেয়ার সেটিংস (Facebook Integration)
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                    ফটোকার্ড জেনারেট হওয়ার পর ফেসবুক পেজে স্বয়ংক্রিয় প্রকাশ ও গ্রুপে স্মার্ট শেয়ারিং কনফিগারেশন
+                  </p>
+                </div>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  New Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter new secure password"
-                  value={pwdForm.newPassword}
-                  onChange={(e) => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
+              {fbSaveMsg && (
+                <div
                   style={{
-                    width: '100%',
-                    padding: '11px 14px',
+                    padding: '12px 16px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
+                    marginBottom: '18px',
+                    background: fbSaveMsg.success ? '#f0fdf4' : '#fef2f2',
+                    border: `1px solid ${fbSaveMsg.success ? '#bbf7d0' : '#fecaca'}`,
+                    color: fbSaveMsg.success ? '#15803d' : '#991b1b',
+                    fontWeight: 600,
+                    fontSize: '0.86rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
-                />
-              </div>
+                >
+                  {fbSaveMsg.success ? <Check size={18} /> : <AlertCircle size={18} />}
+                  <span>{fbSaveMsg.text}</span>
+                </div>
+              )}
 
-              <div style={{ marginBottom: '22px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Confirm New Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Confirm new password"
-                  value={pwdForm.confirmPassword}
-                  onChange={(e) => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
+              <form onSubmit={handleSaveFacebookSettings}>
+                {/* Posting Mode */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                    ফটোকার্ড পোস্টিং মোড (Preferred Posting Mode)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: `2px solid ${fbForm.postingMode === 'both' ? '#1877f2' : '#e2e8f0'}`,
+                        background: fbForm.postingMode === 'both' ? '#f0f7ff' : '#f8fafc',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="postingMode"
+                        value="both"
+                        checked={fbForm.postingMode === 'both'}
+                        onChange={() => setFbForm({ ...fbForm, postingMode: 'both' })}
+                        style={{ marginTop: '3px', accentColor: '#1877f2' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>
+                          উভয় অপশন (Recommended)
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          মডালে 'ফেসবুকে পোস্ট' ও 'গ্রুপে শেয়ার' দুটি বাটনই থাকবে।
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: `2px solid ${fbForm.postingMode === 'page_api' ? '#1877f2' : '#e2e8f0'}`,
+                        background: fbForm.postingMode === 'page_api' ? '#f0f7ff' : '#f8fafc',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="postingMode"
+                        value="page_api"
+                        checked={fbForm.postingMode === 'page_api'}
+                        onChange={() => setFbForm({ ...fbForm, postingMode: 'page_api' })}
+                        style={{ marginTop: '3px', accentColor: '#1877f2' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>
+                          শুধুমাত্র পেজ অটো-পোস্ট (API)
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          অফিসিয়াল মেটা Graph API দিয়ে সরাসরি পেজে ছবি পোস্ট হবে।
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: `2px solid ${fbForm.postingMode === 'group_share' ? '#1877f2' : '#e2e8f0'}`,
+                        background: fbForm.postingMode === 'group_share' ? '#f0f7ff' : '#f8fafc',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="postingMode"
+                        value="group_share"
+                        checked={fbForm.postingMode === 'group_share'}
+                        onChange={() => setFbForm({ ...fbForm, postingMode: 'group_share' })}
+                        style={{ marginTop: '3px', accentColor: '#1877f2' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>
+                          শুধুমাত্র ১-ক্লিক গ্রুপ শেয়ার
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          ক্যাপশন ও ফটো ক্লিপবোর্ডে কপি হয়ে সাথে সাথে ফেসবুক গ্রুপ ওপেন হবে।
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* API Credentials Section */}
+                <div
                   style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
                     background: '#f8fafc',
+                    borderRadius: '12px',
+                    padding: '18px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '20px',
                   }}
-                />
-              </div>
+                >
+                  <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 800, color: '#1e293b' }}>
+                    মেটা গ্রাফ API ক্রেডেনশিয়াল (Facebook Page API Credentials)
+                  </h4>
 
-              <button
-                type="submit"
-                disabled={savingPwd}
-                style={{
-                  padding: '12px 24px',
-                  background: '#dc2626',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-              >
-                {savingPwd ? 'Updating Password...' : 'Update Password'}
-              </button>
-            </form>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        ফেসবুক পেজ আইডি (Facebook Page ID) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 102938475619283"
+                        value={fbForm.pageId}
+                        onChange={(e) => setFbForm({ ...fbForm, pageId: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          fontSize: '0.88rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        ফেসবুক গ্রুপ ইউআরএল (Group URL for Sharing) *
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://www.facebook.com/groups/..."
+                        value={fbForm.groupUrl}
+                        onChange={(e) => setFbForm({ ...fbForm, groupUrl: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          fontSize: '0.88rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569' }}>
+                        পেজ এক্সেস টোকেন (Page Access Token - Permanent) *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowFbTokenInput(!showFbTokenInput)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#1877f2',
+                          cursor: 'pointer',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {showFbTokenInput ? <EyeOff size={14} /> : <Eye size={14} />}
+                        <span>{showFbTokenInput ? 'টোকেন লুকান' : 'টোকেন দেখুন'}</span>
+                      </button>
+                    </div>
+                    <input
+                      type={showFbTokenInput ? 'text' : 'password'}
+                      placeholder="EAAG... (Page Access Token with pages_manage_posts and pages_read_engagement)"
+                      value={fbForm.pageAccessToken}
+                      onChange={(e) => setFbForm({ ...fbForm, pageAccessToken: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        fontSize: '0.88rem',
+                        fontFamily: 'monospace',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  {/* Test Connection Button & Result */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={handleTestFacebookConnection}
+                      disabled={testingFbConn || !fbForm.pageId || !fbForm.pageAccessToken}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        color: '#334155',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: fbForm.pageId && fbForm.pageAccessToken ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      }}
+                    >
+                      {testingFbConn ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                      <span>{testingFbConn ? 'টেস্ট করা হচ্ছে...' : 'কানেকশন টেস্ট করুন'}</span>
+                    </button>
+
+                    {fbTestMsg && (
+                      <span
+                        style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          color: fbTestMsg.success ? '#15803d' : '#b91c1c',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {fbTestMsg.success ? <Check size={16} /> : <AlertCircle size={16} />}
+                        <span>{fbTestMsg.text}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dynamic Caption Template Section */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                    <label style={{ fontSize: '0.88rem', fontWeight: 700, color: '#334155' }}>
+                      ডিফল্ট ক্যাপশন টেমপ্লেট (Dynamic Caption Template)
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', marginRight: '4px' }}>ট্যাগ যুক্ত করুন:</span>
+                      {['{name}', '{bloodGroup}', '{count}', '{date}', '{slogan}'].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setFbForm({ ...fbForm, captionTemplate: fbForm.captionTemplate + ' ' + tag })}
+                          style={{
+                            padding: '3px 8px',
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            borderRadius: '6px',
+                            fontSize: '0.74rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <textarea
+                    rows={6}
+                    value={fbForm.captionTemplate}
+                    onChange={(e) => setFbForm({ ...fbForm, captionTemplate: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      fontSize: '0.88rem',
+                      lineHeight: '1.55',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                    }}
+                    placeholder="ক্যাপশন টেমপ্লেট লিখুন..."
+                  />
+
+                  <div style={{ marginTop: '6px', fontSize: '0.78rem', color: '#64748b', lineHeight: '1.4' }}>
+                    💡 <strong>ভ্যারিয়েবল গাইড:</strong> <code>{'{name}'}</code> = রক্তদাতার নাম, <code>{'{bloodGroup}'}</code> = রক্তের গ্রুপ, <code>{'{count}'}</code> = রক্তদানের সংখ্যা (যেমন: ৩য় বার), <code>{'{date}'}</code> = রক্তদানের তারিখ, <code>{'{slogan}'}</code> = সংস্থার স্লোগান।
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <button
+                  type="submit"
+                  disabled={savingFbForm}
+                  style={{
+                    padding: '12px 28px',
+                    background: '#1877f2',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(24, 119, 242, 0.3)',
+                  }}
+                >
+                  {savingFbForm ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>সেভ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>ফেসবুক সেটিংস সংরক্ষণ করুন</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* 2. Admin Password Change */}
+            <div className="admin-card" style={{ padding: '24px' }}>
+              <h3 style={{ color: '#0f172a', fontSize: '1.15rem', fontWeight: 800, marginBottom: '16px' }}>
+                Change Admin Password
+              </h3>
+
+              {pwdMsg && (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    marginBottom: '18px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                    color: '#0f172a',
+                  }}
+                >
+                  {pwdMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleChangePassword} style={{ maxWidth: '440px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter current password"
+                    value={pwdForm.currentPassword}
+                    onChange={(e) => setPwdForm({ ...pwdForm, currentPassword: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#f8fafc',
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter new secure password"
+                    value={pwdForm.newPassword}
+                    onChange={(e) => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#f8fafc',
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '22px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Confirm new password"
+                    value={pwdForm.confirmPassword}
+                    onChange={(e) => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#f8fafc',
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingPwd}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
+                >
+                  {savingPwd ? 'Updating Password...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
           </div>
         )}
 

@@ -331,3 +331,29 @@ export interface BloodCompatibility {
   isUniversalDonor?: boolean;
   isUniversalRecipient?: boolean;
 }
+
+// ------------------------------------------------------------------------------
+// Facebook Integration Settings & Posting Models
+// ------------------------------------------------------------------------------
+
+export type FacebookPostingMode = 'both' | 'page_api' | 'group_share';
+
+export interface FacebookSettings {
+  postingMode: FacebookPostingMode;
+  pageId: string;
+  pageAccessToken: string;
+  groupUrl: string;
+  captionTemplate: string;
+  hasToken?: boolean;
+  updatedAt?: string;
+}
+
+export interface FacebookPostResponse {
+  success: boolean;
+  message?: string;
+  postId?: string;
+  postUrl?: string;
+  groupUrl?: string;
+  error?: string;
+}
+
