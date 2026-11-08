@@ -2714,6 +2714,16 @@ body:has(.admin-login-wrapper) {
     background: #dcfce7;
 }
 
+.admin-btn-card {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fee2e2;
+}
+.admin-btn-card:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
 .admin-btn-call {
     background: #eff6ff;
     color: #2563eb;

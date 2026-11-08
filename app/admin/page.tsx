@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import ImageCropModal from '@/components/ImageCropModal';
+import DonateCardModal from '@/components/DonateCardModal';
 import { compressImage } from '@/lib/image-compress';
 import {
   Donor,
@@ -75,6 +77,8 @@ import {
   Square,
   Shield,
   UserCog,
+  Crop,
+  Sparkles,
 } from 'lucide-react';
 
 type AdminTab =
@@ -188,6 +192,17 @@ export default function AdminPage() {
   const [donationFormMsg, setDonationFormMsg] = useState<string | null>(null);
   const [compressingImg, setCompressingImg] = useState<boolean>(false);
   const [savingDonation, setSavingDonation] = useState<boolean>(false);
+
+  // Photo crop & card generation state
+  const [cropModalImg, setCropModalImg] = useState<string | null>(null);
+  const [cardModalData, setCardModalData] = useState<{
+    donorName: string;
+    bloodGroup?: string;
+    date: string;
+    number: string;
+    image?: string | null;
+  } | null>(null);
+  const [lastSavedDonation, setLastSavedDonation] = useState<Donation | null>(null);
 
   // Member Form state
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
@@ -1033,24 +1048,32 @@ export default function AdminPage() {
   };
 
   // Donation handlers
-  const handleDonationImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDonationImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      setCompressingImg(true);
-      const base64 = await compressImage(file, 800, 800, 0.8);
-      setDonationForm({ ...donationForm, image: base64 });
-    } catch (err: any) {
-      alert('Image compression failed: ' + err?.message);
-    } finally {
-      setCompressingImg(false);
+    if (!file.type.startsWith('image/')) {
+      alert('অনুগ্রহ করে একটি ছবি ফাইল নির্বাচন করুন (PNG, JPG, JPEG, WEBP)।');
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setCropModalImg(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedBase64: string) => {
+    setDonationForm((prev) => ({ ...prev, image: croppedBase64 }));
   };
 
   const handleSaveDonation = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSavingDonation(true);
     setDonationFormMsg(null);
+    setLastSavedDonation(null);
 
     try {
       const url = editingDonationId ? `/api/donations/${editingDonationId}` : '/api/donations';
@@ -1067,6 +1090,14 @@ export default function AdminPage() {
         setDonationFormMsg(
           editingDonationId ? 'Donation record updated successfully!' : 'Donation record added successfully!'
         );
+        if (data.data) {
+          setLastSavedDonation(data.data);
+        } else {
+          setLastSavedDonation({
+            id: editingDonationId || 'temp',
+            ...donationForm,
+          } as Donation);
+        }
         fetchAllData();
         setEditingDonationId(null);
         setDonationForm({
@@ -2562,17 +2593,48 @@ export default function AdminPage() {
               {donationFormMsg && (
                 <div
                   style={{
-                    padding: '12px',
-                    borderRadius: '10px',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
                     marginBottom: '18px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    background: lastSavedDonation ? '#f0fdf4' : '#f8fafc',
+                    border: `1px solid ${lastSavedDonation ? '#bbf7d0' : '#e2e8f0'}`,
                     fontWeight: 600,
                     fontSize: '0.88rem',
-                    color: '#0f172a',
+                    color: lastSavedDonation ? '#166534' : '#0f172a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap',
                   }}
                 >
-                  {donationFormMsg}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {lastSavedDonation && <Check size={18} color="#16a34a" />}
+                    <span>{donationFormMsg}</span>
+                  </div>
+                  {lastSavedDonation && (
+                    <button
+                      type="button"
+                      onClick={() => setCardModalData(lastSavedDonation)}
+                      style={{
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '7px 14px',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+                      }}
+                    >
+                      <ImageIcon size={14} />
+                      <span>ফটোকার্ড ডাউনলোড করুন</span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -2630,10 +2692,192 @@ export default function AdminPage() {
                       onChange={(e) => setDonationForm({ ...donationForm, number: e.target.value })}
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Activity Photo (Optional)</label>
-                    <input type="file" accept="image/*" onChange={handleDonationImageUpload} />
-                    {compressingImg && <span style={{ fontSize: '0.8rem', color: '#dc2626' }}>Compressing image...</span>}
+                  <div className="form-group full">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: '#334155' }}>
+                        রক্তদান কার্যক্রমের ছবি (Activity Photo)
+                      </label>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        কার্ড টেমপ্লেট সাইজ: ১০৮০ × ১১৮৩
+                      </span>
+                    </div>
+
+                    {donationForm.image ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '14px',
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '64px',
+                            height: '70px',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            border: '1px solid #cbd5e1',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                          }}
+                        >
+                          <img
+                            src={donationForm.image}
+                            alt="Donation preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: '180px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                              ছবি সফলভাবে ক্রপ করা হয়েছে
+                            </span>
+                            <span
+                              style={{
+                                background: '#dcfce7',
+                                color: '#15803d',
+                                fontSize: '0.7rem',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 700,
+                              }}
+                            >
+                              Ready
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>
+                            টেমপ্লেট রেশিওতে সমন্বিত। চাইলে পুনরায় এডজাস্ট করুন বা ফটোকার্ড প্রিভিউ দেখুন।
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setCropModalImg(donationForm.image!)}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              color: '#334155',
+                              padding: '7px 12px',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                            }}
+                            title="Re-crop and adjust image"
+                          >
+                            <Crop size={14} />
+                            <span>ক্রপ ও এডজাস্ট</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCardModalData({
+                                donorName: donationForm.donorName || 'রক্তদাতা',
+                                bloodGroup: donationForm.bloodGroup,
+                                date: donationForm.date,
+                                number: donationForm.number || '3800',
+                                image: donationForm.image,
+                              })
+                            }
+                            style={{
+                              background: '#fee2e2',
+                              border: '1px solid #fecaca',
+                              color: '#b91c1c',
+                              padding: '7px 12px',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                            }}
+                            title="Preview and download photo card"
+                          >
+                            <Sparkles size={14} />
+                            <span>ফটোকার্ড প্রিভিউ</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDonationForm({ ...donationForm, image: null })}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #fecaca',
+                              color: '#dc2626',
+                              padding: '7px 10px',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                            title="Remove photo"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          border: '2px dashed #cbd5e1',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          textAlign: 'center',
+                          background: '#f8fafc',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <input
+                          type="file"
+                          id="donation-photo-file-input"
+                          accept="image/*"
+                          onChange={handleDonationImageUpload}
+                          style={{ display: 'none' }}
+                        />
+                        <label
+                          htmlFor="donation-photo-file-input"
+                          style={{
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            padding: '9px 18px',
+                            borderRadius: '10px',
+                            fontWeight: 700,
+                            fontSize: '0.86rem',
+                            color: '#1e293b',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                          }}
+                        >
+                          <Upload size={16} color="#dc2626" />
+                          <span>ছবি নির্বাচন করুন (ক্রপ ও এডজাস্ট সহ)</span>
+                        </label>
+                        <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                          ছবি সিলেক্ট করলে স্বয়ংক্রিয়ভাবে ক্রপ ও এডজাস্ট অপশন আসবে (১০৮০ × ১১৮৩)
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="form-group full">
                     <label>Donor Address *</label>
@@ -2776,7 +3020,16 @@ export default function AdminPage() {
                         {d.donorAddress}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setCardModalData(d)}
+                        type="button"
+                        className="admin-btn-action admin-btn-card"
+                        title="ফটোকার্ড প্রিভিউ ও ডাউনলোড"
+                      >
+                        <ImageIcon size={13} />
+                        <span>Card</span>
+                      </button>
                       <button
                         onClick={() => handleEditDonation(d)}
                         type="button"
@@ -5740,6 +5993,25 @@ export default function AdminPage() {
               </button>
             </form>
           </div>
+        )}
+
+        {/* Modal: Activity Image Crop & Adjust Modal */}
+        {cropModalImg && (
+          <ImageCropModal
+            imageSrc={cropModalImg}
+            sampleDate={donationForm.date || new Date().toISOString().split('T')[0]}
+            sampleNumber={donationForm.number || '3800'}
+            onCrop={handleCropComplete}
+            onClose={() => setCropModalImg(null)}
+          />
+        )}
+
+        {/* Modal: Donate Card Generator & Downloader Modal */}
+        {cardModalData && (
+          <DonateCardModal
+            donation={cardModalData}
+            onClose={() => setCardModalData(null)}
+          />
         )}
       </main>
     </div>
