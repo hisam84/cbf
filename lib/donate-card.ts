@@ -388,12 +388,6 @@ export async function drawDonateCardToCanvas(
   ctx.lineWidth = 1.5;
   ctx.strokeRect(12, 12, WIDTH - 24, HEIGHT - 24);
   ctx.restore();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-  ctx.shadowBlur = 5;
-  ctx.shadowOffsetY = 2;
-  ctx.fillText(slogan, WIDTH / 2, 1142);
-  ctx.restore();
 }
 
 /**
